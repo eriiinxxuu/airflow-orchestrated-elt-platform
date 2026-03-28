@@ -67,7 +67,7 @@ variable "schedulers" {
 variable "webserver_access_mode" {
   description = "PUBLIC_ONLY or PRIVATE_ONLY"
   type        = string
-  default     = "PRIVATE_ONLY"
+  default     = "PUBLIC_ONLY"
 }
 
 variable "dag_s3_path" {

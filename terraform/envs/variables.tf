@@ -59,6 +59,12 @@ variable "allowed_cidr_blocks" {
   default     = []
 }
 
+variable "webserver_access_mode" {
+  description = "MWAA webserver access mode"
+  type        = string
+  default     = "PUBLIC_ONLY"
+}
+
 # ── Lambda / EventBridge ──────────────────────────────────────
 variable "watchlist" {
   description = "Stock ticker symbols to monitor for earnings"
