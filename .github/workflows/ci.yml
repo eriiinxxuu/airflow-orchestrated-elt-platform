@@ -79,9 +79,14 @@ jobs:
             --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.2/constraints-3.11.txt"
           pip show apache-airflow-providers-amazon
 
+      - name: Debug installed packages
+        run: |
+          pip show apache-airflow-providers-amazon
+          python -c "import airflow.providers.amazon.aws.operators.redshift_sql; print('RedshiftSQLOperator OK')" || echo "Module not found"
+
       - name: Validate DAG imports
         run: |
-          airflow db init
+          airflow db migrate
           python -c "
           import sys
           sys.path.insert(0, 'dags')
@@ -92,5 +97,5 @@ jobs:
               for f, e in db.import_errors.items():
                   print(f'Import error in {f}: {e}')
               sys.exit(1)
-          print(f'OK — loaded {len(db.dags)} DAGs: {list(db.dags.keys())}')
+          print(f'OK - loaded {len(db.dags)} DAGs: {list(db.dags.keys())}')
           "
