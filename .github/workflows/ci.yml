@@ -40,6 +40,12 @@ jobs:
             terraform/modules/lambda/earnings_trigger.py \
             terraform/modules/s3/plugins/operators/
 
+      - name: Commit black formatting if needed
+        run: |
+          git config user.name "github-actions"
+          git config user.email "github-actions@github.com"
+          git diff --quiet || (git add . && git commit -m "style: auto-format with black" && git push)
+
       - name: Run unit tests
         run: |
           pytest tests/ -v \
@@ -64,7 +70,7 @@ jobs:
         run: |
           pip install \
             apache-airflow==2.9.2 \
-            apache-airflow-providers-amazon \
+            "apache-airflow-providers-amazon>=8.0.0" \
             boto3 requests
 
       - name: Validate DAG imports
