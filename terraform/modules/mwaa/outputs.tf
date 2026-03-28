@@ -27,3 +27,7 @@ output "security_group_id" {
   description = "Security group ID attached to the MWAA environment"
   value       = aws_security_group.mwaa.id
 }
+variable "startup_script_s3_object_version" {
+  description = "Version ID of startup.sh"
+  type        = string
+}

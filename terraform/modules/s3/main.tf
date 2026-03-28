@@ -153,3 +153,9 @@ resource "aws_ssm_parameter" "data_bucket_name" {
   type  = "String"
   value = aws_s3_bucket.data.bucket
 }
+resource "aws_s3_object" "startup_script" {
+  bucket = aws_s3_bucket.mwaa.id
+  key    = "scripts/startup.sh"
+  source = "${path.module}/../mwaa/startup.sh"
+  etag   = filemd5("${path.module}/../mwaa/startup.sh")
+}

@@ -27,3 +27,7 @@ output "requirements_s3_object_version" {
   description = "Version ID of the uploaded requirements.txt — passed to MWAA depends_on"
   value       = aws_s3_object.requirements_txt.version_id
 }
+output "startup_script_version" {
+  description = "Version ID of startup.sh"
+  value       = aws_s3_object.startup_script.version_id
+}

@@ -164,6 +164,7 @@ resource "aws_iam_role_policy" "mwaa_execution" {
           "ecs:DescribeTasks",
           "ecs:StopTask",
           "ecs:DescribeTaskDefinition",
+          "ecs:TagResource",
         ]
         Resource = "*"
       },
@@ -238,6 +239,7 @@ resource "aws_mwaa_environment" "main" {
   plugins_s3_path      = var.plugins_s3_path
   requirements_s3_path = var.requirements_s3_path
   requirements_s3_object_version  = var.requirements_s3_object_version
+  startup_script_s3_path = "scripts/startup.sh"
 
   network_configuration {
     security_group_ids = [aws_security_group.mwaa.id]
@@ -294,5 +296,6 @@ resource "aws_mwaa_environment" "main" {
     aws_cloudwatch_log_group.worker,
     var.plugins_s3_object_version,
     var.requirements_s3_object_version,
+    var.startup_script_s3_object_version,
   ]
 }

@@ -50,6 +50,7 @@ module "mwaa" {
   plugins_s3_object_version      = module.s3.plugins_s3_object_version
   requirements_s3_object_version = module.s3.requirements_s3_object_version
   webserver_access_mode = var.webserver_access_mode
+  startup_script_s3_object_version = module.s3.startup_script_version
 }
 
 # ── IAM ───────────────────────────────────────────────────────
