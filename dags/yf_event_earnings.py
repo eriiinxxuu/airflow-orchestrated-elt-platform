@@ -69,9 +69,9 @@ def _parse_conf(**context) -> None:
         symbols = [s.strip() for s in symbols.split(",")]
 
     earnings_dates = conf.get("earnings_dates", {})
-    triggered_by   = conf.get("triggered_by", "unknown")
+    triggered_by = conf.get("triggered_by", "unknown")
 
-    context["ti"].xcom_push(key="symbols",        value=symbols)
+    context["ti"].xcom_push(key="symbols", value=symbols)
     context["ti"].xcom_push(key="earnings_dates", value=earnings_dates)
 
     import logging
@@ -86,8 +86,8 @@ def _parse_conf(**context) -> None:
 
 # ── Task function: SNS completion notification ────────────────
 def _notify_sns(**context) -> None:
-    symbols     = context["ti"].xcom_pull(key="symbols",        task_ids="parse_conf")
-    earn_dates  = context["ti"].xcom_pull(key="earnings_dates", task_ids="parse_conf")
+    symbols = context["ti"].xcom_pull(key="symbols", task_ids="parse_conf")
+    earn_dates = context["ti"].xcom_pull(key="earnings_dates", task_ids="parse_conf")
 
     lines = [f"- {s}: {earn_dates.get(s, 'today')}" for s in symbols]
     send_sns_message(
@@ -104,10 +104,10 @@ def _notify_sns(**context) -> None:
 with DAG(
     dag_id="yf_event_earnings",
     description="Yahoo Finance earnings (Lambda-triggered, event-driven)",
-    schedule_interval=None,              # Never scheduled — triggered by Lambda only
+    schedule_interval=None,  # Never scheduled — triggered by Lambda only
     start_date=datetime(2024, 1, 1),
     catchup=False,
-    max_active_runs=3,                   # Allow multiple concurrent earnings events
+    max_active_runs=3,  # Allow multiple concurrent earnings events
     default_args=default_args(retries=3),
     sla_miss_callback=sla_miss_callback,
     render_template_as_native_obj=True,  # Preserve native Python types after Jinja render

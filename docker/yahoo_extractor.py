@@ -46,30 +46,30 @@ log = logging.getLogger("yahoo-extractor")
 # Config  (read from environment variables injected by Airflow ECSOperator)
 # ─────────────────────────────────────────────────────────────
 class Config:
-    EXTRACT_MODE:    str   = os.environ["EXTRACT_MODE"]
-    SYMBOLS:         list  = [
+    EXTRACT_MODE: str = os.environ["EXTRACT_MODE"]
+    SYMBOLS: list = [
         s.strip().upper() for s in os.environ["SYMBOLS"].split(",") if s.strip()
     ]
-    S3_BUCKET:       str   = os.environ["S3_BUCKET"]
-    S3_KEY:          str   = os.environ["S3_KEY"]
-    EXECUTION_DATE:  str   = os.getenv("EXECUTION_DATE", datetime.utcnow().isoformat())
-    ENVIRONMENT:     str   = os.getenv("ENVIRONMENT", "dev")
-    OHLCV_INTERVAL:  str   = os.getenv("OHLCV_INTERVAL", "1d")
-    OHLCV_RANGE:     str   = os.getenv("OHLCV_RANGE", "1d")
-    MAX_WORKERS:     int   = int(os.getenv("MAX_WORKERS", "4"))
-    RETRY_ATTEMPTS:  int   = int(os.getenv("RETRY_ATTEMPTS", "5"))
-    RETRY_BACKOFF:   float = float(os.getenv("RETRY_BACKOFF", "1.5"))
-    REQUEST_TIMEOUT: int   = int(os.getenv("REQUEST_TIMEOUT", "30"))
+    S3_BUCKET: str = os.environ["S3_BUCKET"]
+    S3_KEY: str = os.environ["S3_KEY"]
+    EXECUTION_DATE: str = os.getenv("EXECUTION_DATE", datetime.utcnow().isoformat())
+    ENVIRONMENT: str = os.getenv("ENVIRONMENT", "dev")
+    OHLCV_INTERVAL: str = os.getenv("OHLCV_INTERVAL", "1d")
+    OHLCV_RANGE: str = os.getenv("OHLCV_RANGE", "1d")
+    MAX_WORKERS: int = int(os.getenv("MAX_WORKERS", "4"))
+    RETRY_ATTEMPTS: int = int(os.getenv("RETRY_ATTEMPTS", "5"))
+    RETRY_BACKOFF: float = float(os.getenv("RETRY_BACKOFF", "1.5"))
+    REQUEST_TIMEOUT: int = int(os.getenv("REQUEST_TIMEOUT", "30"))
 
 
 # ─────────────────────────────────────────────────────────────
 # Yahoo Finance API Endpoints
 # ─────────────────────────────────────────────────────────────
-BASE_CHART   = "https://query1.finance.yahoo.com/v8/finance/chart"
+BASE_CHART = "https://query1.finance.yahoo.com/v8/finance/chart"
 BASE_SUMMARY = "https://query2.finance.yahoo.com/v10/finance/quoteSummary"
-BASE_SEARCH  = "https://query2.finance.yahoo.com/v1/finance/search"
-CRUMB_URL    = "https://query2.finance.yahoo.com/v1/test/getcrumb"
-CONSENT_URL  = "https://finance.yahoo.com"
+BASE_SEARCH = "https://query2.finance.yahoo.com/v1/finance/search"
+CRUMB_URL = "https://query2.finance.yahoo.com/v1/test/getcrumb"
+CONSENT_URL = "https://finance.yahoo.com"
 
 # Yahoo Finance blocks requests without a browser User-Agent
 BROWSER_UA = (
@@ -107,15 +107,17 @@ def build_session() -> tuple[requests.Session, str]:
     )
     session.mount("https://", HTTPAdapter(max_retries=retry))
 
-    session.headers.update({
-        "User-Agent":      BROWSER_UA,
-        "Accept":          "application/json, text/plain, */*",
-        "Accept-Language": "en-US,en;q=0.9",
-        "Accept-Encoding": "gzip, deflate, br",
-        "Referer":         "https://finance.yahoo.com/",
-        "Origin":          "https://finance.yahoo.com",
-        "DNT":             "1",
-    })
+    session.headers.update(
+        {
+            "User-Agent": BROWSER_UA,
+            "Accept": "application/json, text/plain, */*",
+            "Accept-Language": "en-US,en;q=0.9",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Referer": "https://finance.yahoo.com/",
+            "Origin": "https://finance.yahoo.com",
+            "DNT": "1",
+        }
+    )
 
     # Step 1: visit homepage so Yahoo sets the session cookie
     log.info("Establishing Yahoo Finance session ...")
@@ -206,11 +208,11 @@ def extract_ohlcv(
         session,
         f"{BASE_CHART}/{symbol}",
         params={
-            "interval":      config.OHLCV_INTERVAL,
-            "range":         config.OHLCV_RANGE,
+            "interval": config.OHLCV_INTERVAL,
+            "range": config.OHLCV_RANGE,
             "includePrePost": "false",  # exclude pre/post market data
-            "events":        "div,splits",
-            "crumb":         crumb,
+            "events": "div,splits",
+            "crumb": crumb,
         },
         label=f"ohlcv:{symbol}",
     )
@@ -220,11 +222,11 @@ def extract_ohlcv(
         log.warning("[%s] chart result empty", symbol)
         return []
 
-    result     = result[0]
-    meta       = result.get("meta", {})
+    result = result[0]
+    meta = result.get("meta", {})
     timestamps = result.get("timestamp", [])
-    quote      = result["indicators"]["quote"][0]
-    adjclose   = result["indicators"].get("adjclose", [{}])[0].get("adjclose", [])
+    quote = result["indicators"]["quote"][0]
+    adjclose = result["indicators"].get("adjclose", [{}])[0].get("adjclose", [])
 
     # Convert events to {timestamp_str: value} for O(1) lookups
     dividends = {
@@ -239,24 +241,26 @@ def extract_ohlcv(
     records = []
     for i, ts in enumerate(timestamps):
         dt = datetime.fromtimestamp(ts, tz=timezone.utc)
-        records.append({
-            "symbol":           symbol,
-            "timestamp":        dt.isoformat(),
-            "date":             dt.date().isoformat(),
-            "open":             _f(quote["open"][i]),
-            "high":             _f(quote["high"][i]),
-            "low":              _f(quote["low"][i]),
-            "close":            _f(quote["close"][i]),
-            "adj_close":        _f(adjclose[i]) if i < len(adjclose) else None,
-            "volume":           _i(quote["volume"][i]),
-            "dividend":         dividends.get(str(ts)),
-            "split":            splits.get(str(ts)),
-            "currency":         meta.get("currency"),
-            "exchange":         meta.get("exchangeName"),
-            "interval":         config.OHLCV_INTERVAL,
-            "_extracted_at":    datetime.utcnow().isoformat(),
-            "_execution_date":  config.EXECUTION_DATE,
-        })
+        records.append(
+            {
+                "symbol": symbol,
+                "timestamp": dt.isoformat(),
+                "date": dt.date().isoformat(),
+                "open": _f(quote["open"][i]),
+                "high": _f(quote["high"][i]),
+                "low": _f(quote["low"][i]),
+                "close": _f(quote["close"][i]),
+                "adj_close": _f(adjclose[i]) if i < len(adjclose) else None,
+                "volume": _i(quote["volume"][i]),
+                "dividend": dividends.get(str(ts)),
+                "split": splits.get(str(ts)),
+                "currency": meta.get("currency"),
+                "exchange": meta.get("exchangeName"),
+                "interval": config.OHLCV_INTERVAL,
+                "_extracted_at": datetime.utcnow().isoformat(),
+                "_execution_date": config.EXECUTION_DATE,
+            }
+        )
 
     log.info("[%s] OHLCV: %d rows", symbol, len(records))
     return records
@@ -267,14 +271,16 @@ def extract_ohlcv(
 # ─────────────────────────────────────────────────────────────
 
 # Fetch multiple modules in a single request to avoid multiple round-trips
-FUNDAMENTAL_MODULES = ",".join([
-    "assetProfile",         # Company overview, sector, employee count
-    "summaryDetail",        # PE ratio, dividends, 52-week range
-    "financialData",        # Profit margins, ROE, cash flow
-    "defaultKeyStatistics", # EPS, price-to-book, short interest
-    "price",                # Live price, market cap
-    "earningsTrend",        # Forward earnings estimates
-])
+FUNDAMENTAL_MODULES = ",".join(
+    [
+        "assetProfile",  # Company overview, sector, employee count
+        "summaryDetail",  # PE ratio, dividends, 52-week range
+        "financialData",  # Profit margins, ROE, cash flow
+        "defaultKeyStatistics",  # EPS, price-to-book, short interest
+        "price",  # Live price, market cap
+        "earningsTrend",  # Forward earnings estimates
+    ]
+)
 
 
 def extract_fundamentals(
@@ -310,15 +316,15 @@ def extract_fundamentals(
         session,
         f"{BASE_SUMMARY}/{symbol}",
         params={
-            "modules":   FUNDAMENTAL_MODULES,
-            "crumb":     crumb,
+            "modules": FUNDAMENTAL_MODULES,
+            "crumb": crumb,
             "formatted": "false",
-            "lang":      "en-US",
+            "lang": "en-US",
         },
         label=f"fundamentals:{symbol}",
     )
 
-    res  = body["quoteSummary"]["result"][0]
+    res = body["quoteSummary"]["result"][0]
     prof = res.get("assetProfile", {})
     summ = res.get("summaryDetail", {})
     fins = res.get("financialData", {})
@@ -326,60 +332,60 @@ def extract_fundamentals(
     pric = res.get("price", {})
 
     record = {
-        "symbol":   symbol,
-        "date":     config.EXECUTION_DATE[:10],
+        "symbol": symbol,
+        "date": config.EXECUTION_DATE[:10],
         # ── Company info ───────────────────────────
-        "company_name":          pric.get("longName") or pric.get("shortName"),
-        "sector":                prof.get("sector"),
-        "industry":              prof.get("industry"),
-        "exchange":              pric.get("exchangeName"),
-        "currency":              pric.get("currency"),
-        "country":               prof.get("country"),
-        "full_time_employees":   _i(prof.get("fullTimeEmployees")),
+        "company_name": pric.get("longName") or pric.get("shortName"),
+        "sector": prof.get("sector"),
+        "industry": prof.get("industry"),
+        "exchange": pric.get("exchangeName"),
+        "currency": pric.get("currency"),
+        "country": prof.get("country"),
+        "full_time_employees": _i(prof.get("fullTimeEmployees")),
         # ── Live price ─────────────────────────────
-        "regular_market_price":  _f(pric.get("regularMarketPrice")),
-        "market_cap":            _f(pric.get("marketCap")),
+        "regular_market_price": _f(pric.get("regularMarketPrice")),
+        "market_cap": _f(pric.get("marketCap")),
         "regular_market_volume": _i(pric.get("regularMarketVolume")),
         # ── Valuation ──────────────────────────────
-        "pe_ratio_ttm":          _f(summ.get("trailingPE")),
-        "forward_pe":            _f(summ.get("forwardPE")),
-        "price_to_book":         _f(stat.get("priceToBook")),
-        "price_to_sales_ttm":    _f(summ.get("priceToSalesTrailing12Months")),
-        "enterprise_value":      _f(stat.get("enterpriseValue")),
-        "ev_to_ebitda":          _f(stat.get("enterpriseToEbitda")),
-        "peg_ratio":             _f(stat.get("pegRatio")),
+        "pe_ratio_ttm": _f(summ.get("trailingPE")),
+        "forward_pe": _f(summ.get("forwardPE")),
+        "price_to_book": _f(stat.get("priceToBook")),
+        "price_to_sales_ttm": _f(summ.get("priceToSalesTrailing12Months")),
+        "enterprise_value": _f(stat.get("enterpriseValue")),
+        "ev_to_ebitda": _f(stat.get("enterpriseToEbitda")),
+        "peg_ratio": _f(stat.get("pegRatio")),
         # ── Profitability ───────────────────────────
-        "profit_margin":         _f(fins.get("profitMargins")),
-        "gross_margin":          _f(fins.get("grossMargins")),
-        "operating_margin":      _f(fins.get("operatingMargins")),
-        "return_on_equity":      _f(fins.get("returnOnEquity")),
-        "return_on_assets":      _f(fins.get("returnOnAssets")),
-        "revenue_ttm":           _f(fins.get("totalRevenue")),
-        "ebitda":                _f(fins.get("ebitda")),
-        "free_cashflow":         _f(fins.get("freeCashflow")),
-        "eps_ttm":               _f(stat.get("trailingEps")),
-        "eps_forward":           _f(stat.get("forwardEps")),
+        "profit_margin": _f(fins.get("profitMargins")),
+        "gross_margin": _f(fins.get("grossMargins")),
+        "operating_margin": _f(fins.get("operatingMargins")),
+        "return_on_equity": _f(fins.get("returnOnEquity")),
+        "return_on_assets": _f(fins.get("returnOnAssets")),
+        "revenue_ttm": _f(fins.get("totalRevenue")),
+        "ebitda": _f(fins.get("ebitda")),
+        "free_cashflow": _f(fins.get("freeCashflow")),
+        "eps_ttm": _f(stat.get("trailingEps")),
+        "eps_forward": _f(stat.get("forwardEps")),
         # ── Growth ─────────────────────────────────
-        "revenue_growth_yoy":    _f(fins.get("revenueGrowth")),
-        "earnings_growth_yoy":   _f(fins.get("earningsGrowth")),
+        "revenue_growth_yoy": _f(fins.get("revenueGrowth")),
+        "earnings_growth_yoy": _f(fins.get("earningsGrowth")),
         # ── Balance sheet ───────────────────────────
-        "total_cash":            _f(fins.get("totalCash")),
-        "total_debt":            _f(fins.get("totalDebt")),
-        "debt_to_equity":        _f(fins.get("debtToEquity")),
-        "current_ratio":         _f(fins.get("currentRatio")),
+        "total_cash": _f(fins.get("totalCash")),
+        "total_debt": _f(fins.get("totalDebt")),
+        "debt_to_equity": _f(fins.get("debtToEquity")),
+        "current_ratio": _f(fins.get("currentRatio")),
         # ── Dividends ──────────────────────────────
-        "dividend_yield":        _f(summ.get("dividendYield")),
-        "dividend_rate":         _f(summ.get("dividendRate")),
-        "payout_ratio":          _f(summ.get("payoutRatio")),
+        "dividend_yield": _f(summ.get("dividendYield")),
+        "dividend_rate": _f(summ.get("dividendRate")),
+        "payout_ratio": _f(summ.get("payoutRatio")),
         # ── 52-week range ───────────────────────────
-        "fifty_two_week_high":   _f(summ.get("fiftyTwoWeekHigh")),
-        "fifty_two_week_low":    _f(summ.get("fiftyTwoWeekLow")),
-        "beta":                  _f(summ.get("beta")),
+        "fifty_two_week_high": _f(summ.get("fiftyTwoWeekHigh")),
+        "fifty_two_week_low": _f(summ.get("fiftyTwoWeekLow")),
+        "beta": _f(summ.get("beta")),
         # ── Shares ─────────────────────────────────
-        "shares_outstanding":    _f(stat.get("sharesOutstanding")),
-        "short_ratio":           _f(stat.get("shortRatio")),
-        "_extracted_at":         datetime.utcnow().isoformat(),
-        "_execution_date":       config.EXECUTION_DATE,
+        "shares_outstanding": _f(stat.get("sharesOutstanding")),
+        "short_ratio": _f(stat.get("shortRatio")),
+        "_extracted_at": datetime.utcnow().isoformat(),
+        "_execution_date": config.EXECUTION_DATE,
     }
 
     log.info("[%s] Fundamentals extracted", symbol)
@@ -390,12 +396,14 @@ def extract_fundamentals(
 # Mode 3: Earnings  ->  /v10/finance/quoteSummary (earnings modules)
 # ─────────────────────────────────────────────────────────────
 
-EARNINGS_MODULES = ",".join([
-    "earnings",        # Quarterly/annual historical EPS (actual vs estimate)
-    "earningsTrend",   # Analyst forward estimates for upcoming quarters/years
-    "earningsHistory", # EPS surprise % for the last 4 quarters
-    "calendarEvents",  # Next earnings date
-])
+EARNINGS_MODULES = ",".join(
+    [
+        "earnings",  # Quarterly/annual historical EPS (actual vs estimate)
+        "earningsTrend",  # Analyst forward estimates for upcoming quarters/years
+        "earningsHistory",  # EPS surprise % for the last 4 quarters
+        "calendarEvents",  # Next earnings date
+    ]
+)
 
 
 def extract_earnings(
@@ -429,21 +437,21 @@ def extract_earnings(
         session,
         f"{BASE_SUMMARY}/{symbol}",
         params={
-            "modules":   EARNINGS_MODULES,
-            "crumb":     crumb,
+            "modules": EARNINGS_MODULES,
+            "crumb": crumb,
             "formatted": "false",
         },
         label=f"earnings:{symbol}",
     )
 
-    res  = body["quoteSummary"]["result"][0]
+    res = body["quoteSummary"]["result"][0]
     hist = res.get("earningsHistory", {}).get("history", [])
     trend = res.get("earningsTrend", {}).get("trend", [])
-    cal  = res.get("calendarEvents", {}).get("earnings", {})
+    cal = res.get("calendarEvents", {}).get("earnings", {})
 
     # Next earnings date
-    next_date   = None
-    earn_dates  = cal.get("earningsDate", [])
+    next_date = None
+    earn_dates = cal.get("earningsDate", [])
     if earn_dates:
         next_date = _ts(
             earn_dates[0]
@@ -455,46 +463,50 @@ def extract_earnings(
 
     # Historical quarterly results (last 4 quarters)
     for item in hist:
-        records.append({
-            "symbol":               symbol,
-            "record_type":          "historical",
-            "period":               item.get("period"),
-            "report_date":          _ts(item.get("quarter")),
-            "period_type":          "quarterly",
-            "eps_actual":           _f(item.get("epsActual")),
-            "eps_estimate":         _f(item.get("epsEstimate")),
-            "eps_difference":       _f(item.get("epsDifference")),
-            "surprise_pct":         _f(item.get("surprisePercent")),
-            "revenue_estimate_avg": None,
-            "eps_estimate_avg":     None,
-            "num_analysts_eps":     None,
-            "next_earnings_date":   next_date,
-            "_extracted_at":        datetime.utcnow().isoformat(),
-            "_execution_date":      config.EXECUTION_DATE,
-        })
+        records.append(
+            {
+                "symbol": symbol,
+                "record_type": "historical",
+                "period": item.get("period"),
+                "report_date": _ts(item.get("quarter")),
+                "period_type": "quarterly",
+                "eps_actual": _f(item.get("epsActual")),
+                "eps_estimate": _f(item.get("epsEstimate")),
+                "eps_difference": _f(item.get("epsDifference")),
+                "surprise_pct": _f(item.get("surprisePercent")),
+                "revenue_estimate_avg": None,
+                "eps_estimate_avg": None,
+                "num_analysts_eps": None,
+                "next_earnings_date": next_date,
+                "_extracted_at": datetime.utcnow().isoformat(),
+                "_execution_date": config.EXECUTION_DATE,
+            }
+        )
 
     # Forward estimates (0q, +1q, 0y, +1y)
     for t in trend:
-        period   = t.get("period", "")
+        period = t.get("period", "")
         earn_est = t.get("earningsEstimate", {})
-        rev_est  = t.get("revenueEstimate", {})
-        records.append({
-            "symbol":               symbol,
-            "record_type":          "estimate",
-            "period":               period,
-            "report_date":          _ts(t.get("endDate")),
-            "period_type":          "annual" if "y" in period else "quarterly",
-            "eps_actual":           None,
-            "eps_estimate":         _f(earn_est.get("avg")),
-            "eps_difference":       None,
-            "surprise_pct":         None,
-            "revenue_estimate_avg": _f(rev_est.get("avg")),
-            "eps_estimate_avg":     _f(earn_est.get("avg")),
-            "num_analysts_eps":     _i(earn_est.get("numberOfAnalysts")),
-            "next_earnings_date":   next_date,
-            "_extracted_at":        datetime.utcnow().isoformat(),
-            "_execution_date":      config.EXECUTION_DATE,
-        })
+        rev_est = t.get("revenueEstimate", {})
+        records.append(
+            {
+                "symbol": symbol,
+                "record_type": "estimate",
+                "period": period,
+                "report_date": _ts(t.get("endDate")),
+                "period_type": "annual" if "y" in period else "quarterly",
+                "eps_actual": None,
+                "eps_estimate": _f(earn_est.get("avg")),
+                "eps_difference": None,
+                "surprise_pct": None,
+                "revenue_estimate_avg": _f(rev_est.get("avg")),
+                "eps_estimate_avg": _f(earn_est.get("avg")),
+                "num_analysts_eps": _i(earn_est.get("numberOfAnalysts")),
+                "next_earnings_date": next_date,
+                "_extracted_at": datetime.utcnow().isoformat(),
+                "_execution_date": config.EXECUTION_DATE,
+            }
+        )
 
     log.info("[%s] Earnings: %d records", symbol, len(records))
     return records
@@ -525,10 +537,10 @@ def extract_news(
         session,
         BASE_SEARCH,
         params={
-            "q":               symbol,
-            "newsCount":       20,
+            "q": symbol,
+            "newsCount": 20,
             "enableFuzzyQuery": "false",
-            "crumb":           crumb,
+            "crumb": crumb,
         },
         label=f"news:{symbol}",
     )
@@ -543,19 +555,21 @@ def extract_news(
             else None
         )
 
-        records.append({
-            "symbol":          symbol,
-            "uuid":            item.get("uuid"),
-            "title":           item.get("title"),
-            "publisher":       item.get("publisher"),
-            "link":            item.get("link"),
-            "published_at":    _ts(item.get("providerPublishTime")),
-            "type":            item.get("type"),
-            "thumbnail_url":   thumb,
-            "related_tickers": json.dumps(item.get("relatedTickers", [])),
-            "_extracted_at":   datetime.utcnow().isoformat(),
-            "_execution_date": config.EXECUTION_DATE,
-        })
+        records.append(
+            {
+                "symbol": symbol,
+                "uuid": item.get("uuid"),
+                "title": item.get("title"),
+                "publisher": item.get("publisher"),
+                "link": item.get("link"),
+                "published_at": _ts(item.get("providerPublishTime")),
+                "type": item.get("type"),
+                "thumbnail_url": thumb,
+                "related_tickers": json.dumps(item.get("relatedTickers", [])),
+                "_extracted_at": datetime.utcnow().isoformat(),
+                "_execution_date": config.EXECUTION_DATE,
+            }
+        )
 
     log.info("[%s] News: %d articles", symbol, len(records))
     return records
@@ -565,10 +579,10 @@ def extract_news(
 # Dispatch table  (adding a new mode only requires one line here)
 # ─────────────────────────────────────────────────────────────
 EXTRACTORS = {
-    "ohlcv":        extract_ohlcv,
+    "ohlcv": extract_ohlcv,
     "fundamentals": extract_fundamentals,
-    "earnings":     extract_earnings,
-    "news":         extract_news,
+    "earnings": extract_earnings,
+    "news": extract_news,
 }
 
 
@@ -622,14 +636,20 @@ def fetch_with_retry(
             return extract_fn(symbol, config, session, crumb)
         except Exception as exc:
             last_exc = exc
-            wait = config.RETRY_BACKOFF ** attempt
+            wait = config.RETRY_BACKOFF**attempt
             log.warning(
                 "[%s] attempt %d/%d failed: %s  (retry in %.1fs)",
-                symbol, attempt, config.RETRY_ATTEMPTS, exc, wait,
+                symbol,
+                attempt,
+                config.RETRY_ATTEMPTS,
+                exc,
+                wait,
             )
             time.sleep(wait)
 
-    log.error("[%s] all %d attempts failed: %s", symbol, config.RETRY_ATTEMPTS, last_exc)
+    log.error(
+        "[%s] all %d attempts failed: %s", symbol, config.RETRY_ATTEMPTS, last_exc
+    )
     return []
 
 
@@ -652,7 +672,7 @@ def write_to_s3(records: list[dict], config: Config) -> None:
     if not s3_key.endswith(".gz"):
         s3_key += ".gz"
 
-    ndjson     = "\n".join(json.dumps(r, default=str) for r in records)
+    ndjson = "\n".join(json.dumps(r, default=str) for r in records)
     compressed = gzip.compress(ndjson.encode("utf-8"))
 
     boto3.client("s3").put_object(
@@ -664,7 +684,7 @@ def write_to_s3(records: list[dict], config: Config) -> None:
         Metadata={
             "record-count": str(len(records)),
             "extract-mode": config.EXTRACT_MODE,
-            "symbols":      ",".join(config.SYMBOLS),
+            "symbols": ",".join(config.SYMBOLS),
             "extracted-at": datetime.utcnow().isoformat(),
         },
     )

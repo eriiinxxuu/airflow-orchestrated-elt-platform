@@ -46,33 +46,33 @@ class YahooFinanceECSOperator(BaseOperator):
     def __init__(
         self,
         *,
-        extract_mode: str,          # "ohlcv" | "fundamentals" | "earnings"
-        symbols: list[str],         # List of ticker symbols
+        extract_mode: str,  # "ohlcv" | "fundamentals" | "earnings"
+        symbols: list[str],  # List of ticker symbols
         s3_bucket: str,
-        s3_prefix: str,             # e.g. "raw/ohlcv/"
-        cluster: str,               # ECS cluster ARN or name
-        task_definition: str,       # ECS task definition ARN or name
-        container_name: str,        # Container name (must match task definition)
-        subnets: list[str],         # Private subnet IDs (required for awsvpc mode)
+        s3_prefix: str,  # e.g. "raw/ohlcv/"
+        cluster: str,  # ECS cluster ARN or name
+        task_definition: str,  # ECS task definition ARN or name
+        container_name: str,  # Container name (must match task definition)
+        subnets: list[str],  # Private subnet IDs (required for awsvpc mode)
         security_groups: list[str],
         extra_env: dict | None = None,  # Additional environment variable overrides
-        poll_interval: int = 15,        # Seconds between status checks
-        max_attempts: int = 80,         # Max polls: 80 × 15s = 20 minutes
+        poll_interval: int = 15,  # Seconds between status checks
+        max_attempts: int = 80,  # Max polls: 80 × 15s = 20 minutes
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.extract_mode    = extract_mode
-        self.symbols         = symbols
-        self.s3_bucket       = s3_bucket
-        self.s3_prefix       = s3_prefix
-        self.cluster         = cluster
+        self.extract_mode = extract_mode
+        self.symbols = symbols
+        self.s3_bucket = s3_bucket
+        self.s3_prefix = s3_prefix
+        self.cluster = cluster
         self.task_definition = task_definition
-        self.container_name  = container_name
-        self.subnets         = subnets
+        self.container_name = container_name
+        self.subnets = subnets
         self.security_groups = security_groups
-        self.extra_env       = extra_env or {}
-        self.poll_interval   = poll_interval
-        self.max_attempts    = max_attempts
+        self.extra_env = extra_env or {}
+        self.poll_interval = poll_interval
+        self.max_attempts = max_attempts
 
     def execute(self, context: dict) -> str:
         """
@@ -99,7 +99,7 @@ class YahooFinanceECSOperator(BaseOperator):
 
         # Build ECS container environment variables
         env = [
-            {"name": "EXTRACT_MODE",    "value": self.extract_mode},
+            {"name": "EXTRACT_MODE", "value": self.extract_mode},
             {
                 "name": "SYMBOLS",
                 "value": ",".join(
@@ -108,9 +108,9 @@ class YahooFinanceECSOperator(BaseOperator):
                     else [self.symbols]  # Handle string pulled from XCom
                 ),
             },
-            {"name": "S3_BUCKET",       "value": self.s3_bucket},
-            {"name": "S3_KEY",          "value": s3_key},
-            {"name": "EXECUTION_DATE",  "value": exec_date.isoformat()},
+            {"name": "S3_BUCKET", "value": self.s3_bucket},
+            {"name": "S3_KEY", "value": s3_key},
+            {"name": "EXECUTION_DATE", "value": exec_date.isoformat()},
         ]
         for k, v in self.extra_env.items():
             env.append({"name": k, "value": str(v)})
@@ -135,22 +135,22 @@ class YahooFinanceECSOperator(BaseOperator):
             launchType="FARGATE",
             networkConfiguration={
                 "awsvpcConfiguration": {
-                    "subnets":         self.subnets,
-                    "securityGroups":  self.security_groups,
-                    "assignPublicIp":  "DISABLED",  # Outbound via NAT Gateway
+                    "subnets": self.subnets,
+                    "securityGroups": self.security_groups,
+                    "assignPublicIp": "DISABLED",  # Outbound via NAT Gateway
                 }
             },
             overrides={
                 "containerOverrides": [
                     {
-                        "name":        self.container_name,
+                        "name": self.container_name,
                         "environment": env,
                     }
                 ]
             },
             tags=[
-                {"key": "ManagedBy",    "value": "airflow"},
-                {"key": "ExtractMode",  "value": self.extract_mode},
+                {"key": "ManagedBy", "value": "airflow"},
+                {"key": "ExtractMode", "value": self.extract_mode},
             ],
         )
         failures = resp.get("failures", [])
