@@ -14,6 +14,7 @@ from airflow.models import Variable
 log = logging.getLogger(__name__)
 
 
+
 # ── SNS notification ──────────────────────────────────────────
 def send_sns_message(subject: str, message: str) -> None:
     """
