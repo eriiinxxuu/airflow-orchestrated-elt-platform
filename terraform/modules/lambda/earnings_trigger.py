@@ -84,9 +84,9 @@ def _get_mwaa_token() -> str:
     The Lambda IAM role must have airflow:CreateWebLoginToken on the
     MWAA environment ARN. No username or password is stored anywhere.
     """
-    resp = boto3.client("mwaa").create_web_login_token(Name=MWAA_ENV_NAME)
-    logger.info("MWAA token generated successfully")
-    return resp["WebToken"]
+    resp = boto3.client("mwaa").create_cli_token(Name=MWAA_ENV_NAME)
+    logger.info("MWAA CLI token generated successfully")
+    return resp["CliToken"], resp["WebServerHostname"]
 
 
 # ── Yahoo Finance session ─────────────────────────────────────
@@ -150,46 +150,25 @@ def _check_earnings_date(
 
 
 # ── Airflow REST API ──────────────────────────────────────────
-def _trigger_dag(
-    symbols: list[str],
-    earnings_dates: dict[str, str],
-    token: str,
-) -> None:
-
-    run_id = f"earnings_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"
-    payload = json.dumps(
-        {
-            "dag_run_id": run_id,
-            "conf": {
-                "symbols": symbols,
-                "earnings_dates": earnings_dates,
-                "triggered_by": "earnings_trigger_lambda",
-            },
-        }
-    ).encode()
-
+def _trigger_dag(symbols, earnings_dates, cli_token, hostname):
+    import base64
+    
+    payload = f"dags trigger {AIRFLOW_DAG_ID} --conf '{json.dumps({'symbols': symbols})}'"
+    
     req = urllib.request.Request(
-        f"{AIRFLOW_BASE_URL}/api/v1/dags/{AIRFLOW_DAG_ID}/dagRuns",
-        data=payload,
+        f"https://{hostname}/aws_mwaa/cli",
+        data=payload.encode(),
         headers={
-            "Content-Type": "application/json",
-            "Authorization": f"Bearer {token}",
+            "Content-Type": "text/plain",
+            "Authorization": f"Bearer {cli_token}",
         },
         method="POST",
     )
-    try:
-        resp = urllib.request.urlopen(req, timeout=15)
-        body = json.loads(resp.read())
-        logger.info(
-            "DAG triggered successfully. run_id=%s state=%s",
-            body.get("dag_run_id"),
-            body.get("state"),
-        )
-    except urllib.error.HTTPError as exc:
-        raise RuntimeError(
-            f"Airflow API returned HTTP {exc.code}: {exc.read().decode()}"
-        )
-
+    resp = urllib.request.urlopen(req, timeout=15)
+    body = json.loads(resp.read())
+    stdout = base64.b64decode(body.get("stdout", "")).decode()
+    stderr = base64.b64decode(body.get("stderr", "")).decode()
+    logger.info("CLI response: %s %s", stdout, stderr)
 
 # ── Lambda handler ────────────────────────────────────────────
 def handler(event: dict, context: Any) -> dict:

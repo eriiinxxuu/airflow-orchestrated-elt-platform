@@ -33,7 +33,7 @@ resource "aws_iam_role_policy" "earnings_lambda" {
       {
         Sid      = "MWAAToken"
         Effect   = "Allow"
-        Action   = ["airflow:CreateWebLoginToken"]
+        Action   = ["airflow:CreateWebLoginToken", "airflow:CreateCliToken"]
         Resource = var.mwaa_env_arn
       },
       {
