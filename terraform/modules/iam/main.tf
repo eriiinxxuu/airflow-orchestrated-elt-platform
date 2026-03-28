@@ -36,6 +36,20 @@ resource "aws_iam_role_policy" "earnings_lambda" {
         Action   = ["airflow:CreateWebLoginToken"]
         Resource = var.mwaa_env_arn
       },
+      {
+        # Required for Lambda running inside a VPC
+        # Lambda needs to create/delete network interfaces to attach to the VPC
+        Sid    = "VPCNetworkInterface"
+        Effect = "Allow"
+        Action = [
+          "ec2:CreateNetworkInterface",
+          "ec2:DescribeNetworkInterfaces",
+          "ec2:DeleteNetworkInterface",
+          "ec2:AssignPrivateIpAddresses",
+          "ec2:UnassignPrivateIpAddresses",
+        ]
+        Resource = "*"
+      },
     ]
   })
 }

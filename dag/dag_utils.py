@@ -43,7 +43,7 @@ def on_failure_callback(context: dict) -> None:
     log_url = context["task_instance"].log_url
 
     send_sns_message(
-        subject=f"[Airflow] FAILED – {dag_id}.{task_id}",
+        subject=f"[Airflow] FAILED - {dag_id}.{task_id}",
         message=(
             f"DAG:   {dag_id}\n"
             f"Task:  {task_id}\n"
@@ -58,7 +58,7 @@ def sla_miss_callback(dag, task_list, blocking_task_list, slas, blocking_tis) ->
     task_ids = ", ".join(t.task_id for t in blocking_task_list)
 
     send_sns_message(
-        subject=f"[Airflow] SLA Miss – {dag.dag_id}",
+        subject=f"[Airflow] SLA Miss - {dag.dag_id}",
         message=(
             f"DAG:   {dag.dag_id}\n"
             f"Tasks: {task_ids}"
@@ -81,6 +81,7 @@ def default_args(retries: int = 2) -> dict:
         "retry_delay":               timedelta(minutes=5),
         "retry_exponential_backoff": True,
         "max_retry_delay":           timedelta(minutes=60),
+        "sla":                       timedelta(hours=2),
         "on_failure_callback":       on_failure_callback,
         "email_on_failure":          False,
         "email_on_retry":            False,
