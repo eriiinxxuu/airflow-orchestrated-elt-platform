@@ -93,13 +93,13 @@ with DAG(
             freshness_check("staging.yf_ohlcv", "_extracted_at", max_age_hours=6),
             {
                 "description": "High >= Low (basic candlestick sanity check)",
-                "sql":         "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE high < low",
-                "expected":    0,
+                "sql": "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE high < low",
+                "expected": 0,
             },
             {
                 "description": "No negative close price",
-                "sql":         "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE close < 0",
-                "expected":    0,
+                "sql": "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE close < 0",
+                "expected": 0,
             },
         ],
     )

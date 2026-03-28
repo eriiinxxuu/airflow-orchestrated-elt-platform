@@ -20,3 +20,4 @@ with DAG(
         task_id="check_modules",
         python_callable=check_redshift_modules,
     )
+    

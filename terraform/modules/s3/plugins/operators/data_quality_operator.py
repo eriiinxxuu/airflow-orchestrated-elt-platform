@@ -47,8 +47,8 @@ class DataQualityOperator(BaseOperator):
         failures = []
 
         for check in self.checks:
-            desc     = check.get("description", check["sql"][:60])
-            sql      = check["sql"]
+            desc = check.get("description", check["sql"][:60])
+            sql = check["sql"]
             expected = check["expected"]
 
             log.info("Check: %s", desc)
@@ -82,8 +82,8 @@ def row_count_check(table: str, min_rows: int = 1) -> dict:
     """Check that a table has at least min_rows rows."""
     return {
         "description": f"{table} has >= {min_rows} rows",
-        "sql":         f"SELECT COUNT(*) FROM {table}",
-        "expected":    lambda n: n >= min_rows,
+        "sql": f"SELECT COUNT(*) FROM {table}",
+        "expected": lambda n: n >= min_rows,
     }
 
 
@@ -91,8 +91,8 @@ def null_check(table: str, column: str) -> dict:
     """Check that a column contains no NULL values."""
     return {
         "description": f"{table}.{column} has no NULLs",
-        "sql":         f"SELECT COUNT(*) FROM {table} WHERE {column} IS NULL",
-        "expected":    0,
+        "sql": f"SELECT COUNT(*) FROM {table} WHERE {column} IS NULL",
+        "expected": 0,
     }
 
 
@@ -101,13 +101,13 @@ def duplicate_check(table: str, keys: list[str]) -> dict:
     key_expr = ", ".join(keys)
     return {
         "description": f"{table} no duplicate ({key_expr})",
-        "sql":         f"""
+        "sql": f"""
             SELECT COUNT(*) FROM (
                 SELECT {key_expr} FROM {table}
                 GROUP BY {key_expr} HAVING COUNT(*) > 1
             )
         """,
-        "expected":    0,
+        "expected": 0,
     }
 
 
@@ -115,10 +115,10 @@ def freshness_check(table: str, ts_col: str, max_age_hours: int = 25) -> dict:
     """Check that the most recent record is within max_age_hours of now."""
     return {
         "description": f"{table}.{ts_col} within {max_age_hours}h",
-        "sql":         f"""
+        "sql": f"""
             SELECT CASE WHEN MAX({ts_col}) >= DATEADD(hour,-{max_age_hours},GETDATE())
                         THEN 1 ELSE 0 END
             FROM {table}
         """,
-        "expected":    1,
+        "expected": 1,
     }
