@@ -54,8 +54,11 @@ jobs:
         id: plan
         working-directory: ${{ env.TF_WORK_DIR }}
         env:
-          TF_VAR_redshift_admin_password: ${{ secrets.REDSHIFT_PASSWORD }}
+          TF_VAR_environment:              dev
+          TF_VAR_redshift_admin_password:  ${{ secrets.REDSHIFT_PASSWORD }}
           TF_VAR_alert_email:              ${{ secrets.ALERT_EMAIL }}
+          TF_VAR_github_org:               ${{ github.repository_owner }}
+          TF_VAR_github_repo:              ${{ github.event.repository.name }}
         run: terraform plan -no-color 2>&1 | tee plan.txt
 
       - name: Comment plan on PR
@@ -104,6 +107,9 @@ jobs:
       - name: Terraform Apply
         working-directory: ${{ env.TF_WORK_DIR }}
         env:
-          TF_VAR_redshift_admin_password: ${{ secrets.REDSHIFT_PASSWORD }}
+          TF_VAR_environment:              dev
+          TF_VAR_redshift_admin_password:  ${{ secrets.REDSHIFT_PASSWORD }}
           TF_VAR_alert_email:              ${{ secrets.ALERT_EMAIL }}
+          TF_VAR_github_org:               ${{ github.repository_owner }}
+          TF_VAR_github_repo:              ${{ github.event.repository.name }}
         run: terraform apply -auto-approve -input=false
