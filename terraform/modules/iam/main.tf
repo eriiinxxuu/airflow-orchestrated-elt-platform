@@ -100,133 +100,145 @@ resource "aws_iam_role" "github_actions" {
 }
 
 # ── Permissions for GitHub Actions ───────────────────────────
-resource "aws_iam_role_policy" "github_actions" {
-  name = "yf-elt-github-actions-policy-${var.environment}"
-  role = aws_iam_role.github_actions.id
 
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Sid    = "TerraformStateS3"
-        Effect = "Allow"
-        Action = [
-          "s3:GetObject",
-          "s3:PutObject",
-          "s3:DeleteObject",
-          "s3:ListBucket",
-        ]
-        Resource = [
-          "arn:aws:s3:::yf-elt-terraform-state*",
-          "arn:aws:s3:::yf-elt-terraform-state*/*",
-        ]
-      },
-      {
-        Sid    = "TerraformStateLock"
-        Effect = "Allow"
-        Action = [
-          "dynamodb:GetItem",
-          "dynamodb:PutItem",
-          "dynamodb:DeleteItem",
-        ]
-        Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/terraform-locks"
-      },
-      {
-        Sid    = "ECRAuth"
-        Effect = "Allow"
-        Action = ["ecr:GetAuthorizationToken"]
-        Resource = "*"
-      },
-      {
-        Sid    = "ECRPush"
-        Effect = "Allow"
-        Action = [
-          "ecr:BatchCheckLayerAvailability",
-          "ecr:GetDownloadUrlForLayer",
-          "ecr:BatchGetImage",
-          "ecr:PutImage",
-          "ecr:InitiateLayerUpload",
-          "ecr:UploadLayerPart",
-          "ecr:CompleteLayerUpload",
-          "ecr:DescribeRepositories",
-          "ecr:ListImages",
-        ]
-        Resource = "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/yf-elt-*"
-      },
-      {
-        Sid    = "S3DAGs"
-        Effect = "Allow"
-        Action = [
-          "s3:PutObject",
-          "s3:GetObject",
-          "s3:DeleteObject",
-          "s3:ListBucket",
-          "s3:GetBucketLocation",
-        ]
-        Resource = [
-          "arn:aws:s3:::yf-elt-mwaa-*",
-          "arn:aws:s3:::yf-elt-mwaa-*/*",
-          "arn:aws:s3:::yf-elt-data-*",
-          "arn:aws:s3:::yf-elt-data-*/*",
-        ]
-      },
-      {
-        Sid    = "SSMRead"
-        Effect = "Allow"
-        Action = ["ssm:GetParameter"]
-        Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/yf-elt/*"
-      },
-      {
-        # Terraform needs broad IAM permissions to manage all the roles it creates
-        Sid    = "IAMManage"
-        Effect = "Allow"
-        Action = [
-          "iam:CreateRole",
-          "iam:DeleteRole",
-          "iam:GetRole",
-          "iam:ListRolePolicies",
-          "iam:ListAttachedRolePolicies",
-          "iam:PutRolePolicy",
-          "iam:DeleteRolePolicy",
-          "iam:GetRolePolicy",
-          "iam:AttachRolePolicy",
-          "iam:DetachRolePolicy",
-          "iam:PassRole",
-          "iam:CreateOpenIDConnectProvider",
-          "iam:GetOpenIDConnectProvider",
-          "iam:DeleteOpenIDConnectProvider",
-          "iam:TagOpenIDConnectProvider",
-        ]
-        Resource = "*"
-      },
-      {
-        Sid    = "TerraformGeneral"
-        Effect = "Allow"
-        Action = [
-          # VPC / Network
-          "ec2:*",
-          # ECS
-          "ecs:*",
-          "ecr:*",
-          # Lambda
-          "lambda:*",
-          # EventBridge
-          "events:*",
-          # CloudWatch
-          "cloudwatch:*",
-          "logs:*",
-          # SNS
-          "sns:*",
-          # Secrets Manager
-          "secretsmanager:*",
-          # MWAA
-          "airflow:*",
-          # Redshift Serverless
-          "redshift-serverless:*",
-          "redshift:*",
-        ]
-        Resource = "*"
-      },
-    ]
-  })
+resource "aws_iam_role_policy_attachment" "github_actions_admin" {
+  role       = aws_iam_role.github_actions.name
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
+# resource "aws_iam_role_policy" "github_actions" {
+#   name = "yf-elt-github-actions-policy-${var.environment}"
+#   role = aws_iam_role.github_actions.id
+
+#   policy = jsonencode({
+#     Version = "2012-10-17"
+#     Statement = [
+#       {
+#         Sid    = "TerraformStateS3"
+#         Effect = "Allow"
+#         Action = [
+#           "s3:GetObject",
+#           "s3:PutObject",
+#           "s3:DeleteObject",
+#           "s3:ListBucket",
+#           "s3:GetBucketLocation",
+#           "s3:GetBucketPolicy",
+#           "s3:PutBucketPolicy",
+#           "s3:GetBucketVersioning",
+#           "s3:GetBucketPublicAccessBlock",
+#           "s3:GetEncryptionConfiguration",
+#           "s3:GetLifecycleConfiguration",
+#                   ]
+#         Resource = [
+#           "arn:aws:s3:::yf-elt-terraform-state*",
+#           "arn:aws:s3:::yf-elt-terraform-state*/*",
+#         ]
+#       },
+#       {
+#         Sid    = "TerraformStateLock"
+#         Effect = "Allow"
+#         Action = [
+#           "dynamodb:GetItem",
+#           "dynamodb:PutItem",
+#           "dynamodb:DeleteItem",
+#         ]
+#         Resource = "arn:aws:dynamodb:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:table/terraform-locks"
+#       },
+#       {
+#         Sid    = "ECRAuth"
+#         Effect = "Allow"
+#         Action = ["ecr:GetAuthorizationToken"]
+#         Resource = "*"
+#       },
+#       {
+#         Sid    = "ECRPush"
+#         Effect = "Allow"
+#         Action = [
+#           "ecr:BatchCheckLayerAvailability",
+#           "ecr:GetDownloadUrlForLayer",
+#           "ecr:BatchGetImage",
+#           "ecr:PutImage",
+#           "ecr:InitiateLayerUpload",
+#           "ecr:UploadLayerPart",
+#           "ecr:CompleteLayerUpload",
+#           "ecr:DescribeRepositories",
+#           "ecr:ListImages",
+#         ]
+#         Resource = "arn:aws:ecr:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:repository/yf-elt-*"
+#       },
+#       {
+#         Sid    = "S3DAGs"
+#         Effect = "Allow"
+#         Action = [
+#           "s3:PutObject",
+#           "s3:GetObject",
+#           "s3:DeleteObject",
+#           "s3:ListBucket",
+#           "s3:GetBucketLocation",
+#         ]
+#         Resource = [
+#           "arn:aws:s3:::yf-elt-mwaa-*",
+#           "arn:aws:s3:::yf-elt-mwaa-*/*",
+#           "arn:aws:s3:::yf-elt-data-*",
+#           "arn:aws:s3:::yf-elt-data-*/*",
+#         ]
+#       },
+#       {
+#         Sid    = "SSMRead"
+#         Effect = "Allow"
+#         Action = ["ssm:GetParameter"]
+#         Resource = "arn:aws:ssm:${data.aws_region.current.name}:${data.aws_caller_identity.current.account_id}:parameter/yf-elt/*"
+#       },
+#       {
+#         # Terraform needs broad IAM permissions to manage all the roles it creates
+#         Sid    = "IAMManage"
+#         Effect = "Allow"
+#         Action = [
+#           "iam:CreateRole",
+#           "iam:DeleteRole",
+#           "iam:GetRole",
+#           "iam:ListRolePolicies",
+#           "iam:ListAttachedRolePolicies",
+#           "iam:PutRolePolicy",
+#           "iam:DeleteRolePolicy",
+#           "iam:GetRolePolicy",
+#           "iam:AttachRolePolicy",
+#           "iam:DetachRolePolicy",
+#           "iam:PassRole",
+#           "iam:CreateOpenIDConnectProvider",
+#           "iam:GetOpenIDConnectProvider",
+#           "iam:DeleteOpenIDConnectProvider",
+#           "iam:TagOpenIDConnectProvider",
+#         ]
+#         Resource = "*"
+#       },
+#       {
+#         Sid    = "TerraformGeneral"
+#         Effect = "Allow"
+#         Action = [
+#           # VPC / Network
+#           "ec2:*",
+#           # ECS
+#           "ecs:*",
+#           "ecr:*",
+#           # Lambda
+#           "lambda:*",
+#           # EventBridge
+#           "events:*",
+#           # CloudWatch
+#           "cloudwatch:*",
+#           "logs:*",
+#           # SNS
+#           "sns:*",
+#           # Secrets Manager
+#           "secretsmanager:*",
+#           # MWAA
+#           "airflow:*",
+#           # Redshift Serverless
+#           "redshift-serverless:*",
+#           "redshift:*",
+#         ]
+#         Resource = "*"
+#       },
+#     ]
+#   })
+# }

@@ -40,39 +40,39 @@ class YahooFinanceECSOperator(BaseOperator):
     """
 
     template_fields = ("symbols", "s3_prefix")
-    ui_color = "#f5a623"   # 在 Airflow UI 中的任务颜色
+    ui_color = "#f5a623"  # 在 Airflow UI 中的任务颜色
 
     @apply_defaults
     def __init__(
         self,
         *,
-        extract_mode: str,             # "ohlcv" | "fundamentals" | "earnings"
-        symbols: list[str],            # 股票代码列表
+        extract_mode: str,  # "ohlcv" | "fundamentals" | "earnings"
+        symbols: list[str],  # 股票代码列表
         s3_bucket: str,
-        s3_prefix: str,                # e.g. "raw/ohlcv/"
-        cluster: str,                  # ECS cluster ARN 或名称
-        task_definition: str,          # ECS task definition ARN 或名称
-        container_name: str,           # 容器名（与 task definition 里一致）
-        subnets: list[str],            # private subnet IDs（awsvpc 模式必须）
+        s3_prefix: str,  # e.g. "raw/ohlcv/"
+        cluster: str,  # ECS cluster ARN 或名称
+        task_definition: str,  # ECS task definition ARN 或名称
+        container_name: str,  # 容器名（与 task definition 里一致）
+        subnets: list[str],  # private subnet IDs（awsvpc 模式必须）
         security_groups: list[str],
-        extra_env: dict | None = None, # 额外的环境变量覆盖
-        poll_interval: int = 15,       # 每隔多少秒查询一次任务状态
-        max_attempts: int = 80,        # 最多等 80×15=20分钟
+        extra_env: dict | None = None,  # 额外的环境变量覆盖
+        poll_interval: int = 15,  # 每隔多少秒查询一次任务状态
+        max_attempts: int = 80,  # 最多等 80×15=20分钟
         **kwargs: Any,
     ) -> None:
         super().__init__(**kwargs)
-        self.extract_mode    = extract_mode
-        self.symbols         = symbols
-        self.s3_bucket       = s3_bucket
-        self.s3_prefix       = s3_prefix
-        self.cluster         = cluster
+        self.extract_mode = extract_mode
+        self.symbols = symbols
+        self.s3_bucket = s3_bucket
+        self.s3_prefix = s3_prefix
+        self.cluster = cluster
         self.task_definition = task_definition
-        self.container_name  = container_name
-        self.subnets         = subnets
+        self.container_name = container_name
+        self.subnets = subnets
         self.security_groups = security_groups
-        self.extra_env       = extra_env or {}
-        self.poll_interval   = poll_interval
-        self.max_attempts    = max_attempts
+        self.extra_env = extra_env or {}
+        self.poll_interval = poll_interval
+        self.max_attempts = max_attempts
 
     def execute(self, context: dict) -> str:
         """
@@ -99,14 +99,18 @@ class YahooFinanceECSOperator(BaseOperator):
 
         # 组装 ECS 容器环境变量
         env = [
-            {"name": "EXTRACT_MODE",    "value": self.extract_mode},
-            {"name": "SYMBOLS",         "value": ",".join(
-                self.symbols if isinstance(self.symbols, list)
-                else [self.symbols]   # 兼容 XCom 拉取的字符串
-            )},
-            {"name": "S3_BUCKET",       "value": self.s3_bucket},
-            {"name": "S3_KEY",          "value": s3_key},
-            {"name": "EXECUTION_DATE",  "value": exec_date.isoformat()},
+            {"name": "EXTRACT_MODE", "value": self.extract_mode},
+            {
+                "name": "SYMBOLS",
+                "value": ",".join(
+                    self.symbols
+                    if isinstance(self.symbols, list)
+                    else [self.symbols]  # 兼容 XCom 拉取的字符串
+                ),
+            },
+            {"name": "S3_BUCKET", "value": self.s3_bucket},
+            {"name": "S3_KEY", "value": s3_key},
+            {"name": "EXECUTION_DATE", "value": exec_date.isoformat()},
         ]
         for k, v in self.extra_env.items():
             env.append({"name": k, "value": str(v)})
@@ -116,36 +120,33 @@ class YahooFinanceECSOperator(BaseOperator):
 
         exit_code = self._poll_task(task_arn)
         if exit_code != 0:
-            raise AirflowException(
-                f"ECS task failed (exit={exit_code}): {task_arn}"
-            )
+            raise AirflowException(f"ECS task failed (exit={exit_code}): {task_arn}")
 
         s3_uri = f"s3://{self.s3_bucket}/{s3_key}.gz"
         self.log.info("Success → %s", s3_uri)
-        return s3_uri   # 自动存入 XCom，下游可用 xcom_pull 获取
+        return s3_uri  # 自动存入 XCom，下游可用 xcom_pull 获取
 
     def _run_ecs_task(self, env: list[dict]) -> str:
         """调用 ECS RunTask，返回 task ARN。"""
-        ecs  = boto3.client("ecs")
+        ecs = boto3.client("ecs")
         resp = ecs.run_task(
             cluster=self.cluster,
             taskDefinition=self.task_definition,
             launchType="FARGATE",
             networkConfiguration={
                 "awsvpcConfiguration": {
-                    "subnets":        self.subnets,
+                    "subnets": self.subnets,
                     "securityGroups": self.security_groups,
                     "assignPublicIp": "DISABLED",  # 用 NAT Gateway 出网
                 }
             },
             overrides={
-                "containerOverrides": [{
-                    "name":        self.container_name,
-                    "environment": env,
-                }]
+                "containerOverrides": [
+                    {"name": self.container_name, "environment": env,}
+                ]
             },
             tags=[
-                {"key": "ManagedBy",   "value": "airflow"},
+                {"key": "ManagedBy", "value": "airflow"},
                 {"key": "ExtractMode", "value": self.extract_mode},
             ],
         )
@@ -166,15 +167,20 @@ class YahooFinanceECSOperator(BaseOperator):
         ecs = boto3.client("ecs")
         for attempt in range(self.max_attempts):
             time.sleep(self.poll_interval)
-            desc   = ecs.describe_tasks(cluster=self.cluster, tasks=[task_arn])
-            task   = desc["tasks"][0]
+            desc = ecs.describe_tasks(cluster=self.cluster, tasks=[task_arn])
+            task = desc["tasks"][0]
             status = task["lastStatus"]
-            self.log.info("[%d/%d] ECS status: %s", attempt + 1, self.max_attempts, status)
+            self.log.info(
+                "[%d/%d] ECS status: %s", attempt + 1, self.max_attempts, status
+            )
 
             if status == "STOPPED":
                 exit_code = (task.get("containers") or [{}])[0].get("exitCode", -1)
-                self.log.info("Stopped. exit=%s reason=%s",
-                              exit_code, task.get("stoppedReason", ""))
+                self.log.info(
+                    "Stopped. exit=%s reason=%s",
+                    exit_code,
+                    task.get("stoppedReason", ""),
+                )
                 return exit_code
 
         raise AirflowException(
@@ -185,8 +191,10 @@ class YahooFinanceECSOperator(BaseOperator):
 
 # ── 便捷子类，每种模式一个 ─────────────────────────────────────
 
+
 class YahooFinanceOHLCVOperator(YahooFinanceECSOperator):
     """提取日线/分钟线 OHLCV 数据。"""
+
     def __init__(self, *, interval: str = "1d", range_: str = "1d", **kwargs):
         super().__init__(
             extract_mode="ohlcv",
@@ -197,11 +205,13 @@ class YahooFinanceOHLCVOperator(YahooFinanceECSOperator):
 
 class YahooFinanceFundamentalsOperator(YahooFinanceECSOperator):
     """提取基本面快照（PE、利润率、市值等）。"""
+
     def __init__(self, **kwargs):
         super().__init__(extract_mode="fundamentals", **kwargs)
 
 
 class YahooFinanceEarningsOperator(YahooFinanceECSOperator):
     """提取财报数据（历史 EPS surprise + 前瞻预估）。"""
+
     def __init__(self, **kwargs):
         super().__init__(extract_mode="earnings", **kwargs)

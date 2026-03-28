@@ -13,8 +13,16 @@ from airflow.models import Variable
 
 # 默认 watchlist（Variable 不存在时的回退值）
 _DEFAULT_WATCHLIST = [
-    "AAPL", "MSFT", "GOOGL", "AMZN", "NVDA",
-    "META", "TSLA", "JPM", "JNJ", "V",
+    "AAPL",
+    "MSFT",
+    "GOOGL",
+    "AMZN",
+    "NVDA",
+    "META",
+    "TSLA",
+    "JPM",
+    "JNJ",
+    "V",
 ]
 
 
@@ -38,11 +46,12 @@ def get_ecs_config() -> dict:
     """
     raw = Variable.get("ecs_config", deserialize_json=True)
     return {
-        "cluster":         raw["cluster_arn"],
+        "cluster": raw["cluster_arn"],
         "task_definition": raw["task_definition"],
-        "container_name":  raw["container_name"],
-        "subnets":         raw["subnets"] if isinstance(raw["subnets"], list)
-                           else raw["subnets"].split(","),
+        "container_name": raw["container_name"],
+        "subnets": raw["subnets"]
+        if isinstance(raw["subnets"], list)
+        else raw["subnets"].split(","),
         "security_groups": [raw["security_group"]],
     }
 

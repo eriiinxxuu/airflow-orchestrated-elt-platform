@@ -21,7 +21,10 @@ from airflow.providers.amazon.aws.transfers.s3_to_redshift import S3ToRedshiftOp
 from dag_utils import default_args, sla_miss_callback
 from operators.yahoo_finance_ecs_operator import YahooFinanceFundamentalsOperator
 from operators.data_quality_operator import (
-    DataQualityOperator, row_count_check, null_check, duplicate_check,
+    DataQualityOperator,
+    row_count_check,
+    null_check,
+    duplicate_check,
 )
 from yf_config import get_watchlist, get_s3_bucket, get_ecs_config, S3_PARTITION
 
@@ -66,8 +69,8 @@ with DAG(
         redshift_conn_id="redshift_default",
         checks=[
             row_count_check("staging.yf_fundamentals", min_rows=1),
-            null_check("staging.yf_fundamentals",      "symbol"),
-            null_check("staging.yf_fundamentals",      "market_cap"),
+            null_check("staging.yf_fundamentals", "symbol"),
+            null_check("staging.yf_fundamentals", "market_cap"),
             duplicate_check("staging.yf_fundamentals", ["symbol", "date"]),
             {
                 "description": "PE ratio positive where not null",

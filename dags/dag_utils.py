@@ -14,7 +14,6 @@ from airflow.models import Variable
 log = logging.getLogger(__name__)
 
 
-
 # ── SNS notification ──────────────────────────────────────────
 def send_sns_message(subject: str, message: str) -> None:
     """
@@ -27,9 +26,7 @@ def send_sns_message(subject: str, message: str) -> None:
     topic_arn = Variable.get("sns_topic_arn")
     try:
         boto3.client("sns").publish(
-            TopicArn=topic_arn,
-            Subject=subject,
-            Message=message,
+            TopicArn=topic_arn, Subject=subject, Message=message,
         )
     except Exception as exc:
         log.error("SNS notification failed: %s", exc)
@@ -38,9 +35,9 @@ def send_sns_message(subject: str, message: str) -> None:
 # ── Airflow callbacks ─────────────────────────────────────────
 def on_failure_callback(context: dict) -> None:
     """Send an SNS alert when a task fails."""
-    dag_id  = context["dag"].dag_id
+    dag_id = context["dag"].dag_id
     task_id = context["task_instance"].task_id
-    exc     = context.get("exception", "unknown")
+    exc = context.get("exception", "unknown")
     log_url = context["task_instance"].log_url
 
     send_sns_message(
@@ -60,10 +57,7 @@ def sla_miss_callback(dag, task_list, blocking_task_list, slas, blocking_tis) ->
 
     send_sns_message(
         subject=f"[Airflow] SLA Miss - {dag.dag_id}",
-        message=(
-            f"DAG:   {dag.dag_id}\n"
-            f"Tasks: {task_ids}"
-        ),
+        message=(f"DAG:   {dag.dag_id}\n" f"Tasks: {task_ids}"),
     )
 
 
@@ -76,15 +70,14 @@ def default_args(retries: int = 2) -> dict:
       1st retry after 5 min, 2nd after 10 min, 3rd after 20 min, etc.
     """
     return {
-        "owner":                     "data-engineering",
-        "depends_on_past":           False,
-        "retries":                   retries,
-        "retry_delay":               timedelta(minutes=5),
+        "owner": "data-engineering",
+        "depends_on_past": False,
+        "retries": retries,
+        "retry_delay": timedelta(minutes=5),
         "retry_exponential_backoff": True,
-        "max_retry_delay":           timedelta(minutes=60),
-        "sla":                       timedelta(hours=2),
-        "on_failure_callback":       on_failure_callback,
-        "email_on_failure":          False,
-        "email_on_retry":            False,
+        "max_retry_delay": timedelta(minutes=60),
+        "sla": timedelta(hours=2),
+        "on_failure_callback": on_failure_callback,
+        "email_on_failure": False,
+        "email_on_retry": False,
     }
-

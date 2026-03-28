@@ -54,13 +54,13 @@ logger.setLevel(logging.INFO)
 
 # ── Config ────────────────────────────────────────────────────
 AIRFLOW_BASE_URL = os.environ["AIRFLOW_BASE_URL"].rstrip("/")
-AIRFLOW_DAG_ID   = os.environ.get("AIRFLOW_DAG_ID", "yf_event_earnings")
-MWAA_ENV_NAME    = os.environ["MWAA_ENV_NAME"]
-WATCHLIST        = json.loads(os.environ["WATCHLIST"])
-DAYS_AHEAD       = int(os.environ.get("DAYS_AHEAD", "1"))
+AIRFLOW_DAG_ID = os.environ.get("AIRFLOW_DAG_ID", "yf_event_earnings")
+MWAA_ENV_NAME = os.environ["MWAA_ENV_NAME"]
+WATCHLIST = json.loads(os.environ["WATCHLIST"])
+DAYS_AHEAD = int(os.environ.get("DAYS_AHEAD", "1"))
 
 YAHOO_SUMMARY = "https://query2.finance.yahoo.com/v10/finance/quoteSummary"
-YAHOO_CRUMB   = "https://query2.finance.yahoo.com/v1/test/getcrumb"
+YAHOO_CRUMB = "https://query2.finance.yahoo.com/v1/test/getcrumb"
 YAHOO_CONSENT = "https://finance.yahoo.com"
 
 HEADERS = {
@@ -68,9 +68,9 @@ HEADERS = {
         "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
         "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
     ),
-    "Accept":          "application/json",
+    "Accept": "application/json",
     "Accept-Language": "en-US,en;q=0.9",
-    "Referer":         "https://finance.yahoo.com/",
+    "Referer": "https://finance.yahoo.com/",
 }
 
 
@@ -116,24 +116,18 @@ def _build_opener():
 
 # ── Earnings date check ───────────────────────────────────────
 def _check_earnings_date(
-    symbol: str,
-    opener,
-    crumb: str,
-    target_dates: set,
+    symbol: str, opener, crumb: str, target_dates: set,
 ) -> str | None:
     url = (
         f"{YAHOO_SUMMARY}/{symbol}"
         f"?modules=calendarEvents&crumb={crumb}&formatted=false"
     )
     try:
-        req  = urllib.request.Request(url, headers=HEADERS)
+        req = urllib.request.Request(url, headers=HEADERS)
         body = json.loads(opener.open(req, timeout=15).read())
         result = (body.get("quoteSummary", {}).get("result") or [{}])[0]
-        dates  = (
-            result
-            .get("calendarEvents", {})
-            .get("earnings", {})
-            .get("earningsDate", [])
+        dates = (
+            result.get("calendarEvents", {}).get("earnings", {}).get("earningsDate", [])
         )
     except Exception as exc:
         logger.warning("[%s] Failed to fetch calendar events: %s", symbol, exc)
@@ -154,26 +148,26 @@ def _check_earnings_date(
 
 # ── Airflow REST API ──────────────────────────────────────────
 def _trigger_dag(
-    symbols: list[str],
-    earnings_dates: dict[str, str],
-    token: str,
+    symbols: list[str], earnings_dates: dict[str, str], token: str,
 ) -> None:
-   
-    run_id  = f"earnings_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"
-    payload = json.dumps({
-        "dag_run_id": run_id,
-        "conf": {
-            "symbols":        symbols,
-            "earnings_dates": earnings_dates,
-            "triggered_by":   "earnings_trigger_lambda",
-        },
-    }).encode()
+
+    run_id = f"earnings_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"
+    payload = json.dumps(
+        {
+            "dag_run_id": run_id,
+            "conf": {
+                "symbols": symbols,
+                "earnings_dates": earnings_dates,
+                "triggered_by": "earnings_trigger_lambda",
+            },
+        }
+    ).encode()
 
     req = urllib.request.Request(
         f"{AIRFLOW_BASE_URL}/api/v1/dags/{AIRFLOW_DAG_ID}/dagRuns",
         data=payload,
         headers={
-            "Content-Type":  "application/json",
+            "Content-Type": "application/json",
             "Authorization": f"Bearer {token}",
         },
         method="POST",
@@ -198,7 +192,7 @@ def handler(event: dict, context: Any) -> dict:
 
     opener, crumb = _build_opener()
 
-    now          = datetime.now(tz=SYDNEY_TZ)
+    now = datetime.now(tz=SYDNEY_TZ)
     target_dates = {now.date() + timedelta(days=i) for i in range(DAYS_AHEAD + 1)}
     logger.info("Checking dates: %s", sorted(str(d) for d in target_dates))
 
@@ -221,7 +215,7 @@ def handler(event: dict, context: Any) -> dict:
     _trigger_dag(symbols, upcoming, token)
 
     return {
-        "triggered":      True,
-        "symbols":        symbols,
+        "triggered": True,
+        "symbols": symbols,
         "earnings_dates": upcoming,
     }

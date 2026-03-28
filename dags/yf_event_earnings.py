@@ -37,7 +37,9 @@ from airflow.providers.amazon.aws.transfers.s3_to_redshift import S3ToRedshiftOp
 from dag_utils import default_args, sla_miss_callback, send_slack_message
 from operators.yahoo_finance_ecs_operator import YahooFinanceEarningsOperator
 from operators.data_quality_operator import (
-    DataQualityOperator, row_count_check, null_check,
+    DataQualityOperator,
+    row_count_check,
+    null_check,
 )
 from yf_config import get_s3_bucket, get_ecs_config, S3_PARTITION
 
@@ -65,22 +67,25 @@ def _parse_conf(**context) -> None:
         symbols = [s.strip() for s in symbols.split(",")]
 
     earnings_dates = conf.get("earnings_dates", {})
-    triggered_by   = conf.get("triggered_by",   "unknown")
+    triggered_by = conf.get("triggered_by", "unknown")
 
-    context["ti"].xcom_push(key="symbols",        value=symbols)
+    context["ti"].xcom_push(key="symbols", value=symbols)
     context["ti"].xcom_push(key="earnings_dates", value=earnings_dates)
 
     import logging
+
     logging.getLogger(__name__).info(
         "Triggered by: %s | symbols: %s | dates: %s",
-        triggered_by, symbols, earnings_dates,
+        triggered_by,
+        symbols,
+        earnings_dates,
     )
 
 
 # ── Task 函数：Slack 通知 ─────────────────────────────────────
 def _notify_slack(**context) -> None:
-    symbols      = context["ti"].xcom_pull(key="symbols",        task_ids="parse_conf")
-    earn_dates   = context["ti"].xcom_pull(key="earnings_dates", task_ids="parse_conf")
+    symbols = context["ti"].xcom_pull(key="symbols", task_ids="parse_conf")
+    earn_dates = context["ti"].xcom_pull(key="earnings_dates", task_ids="parse_conf")
 
     lines = [f"• `{s}` – {earn_dates.get(s, 'today')}" for s in symbols]
     send_slack_message(
@@ -95,13 +100,13 @@ def _notify_slack(**context) -> None:
 with DAG(
     dag_id="yf_event_earnings",
     description="Yahoo Finance earnings (Lambda-triggered, event-driven)",
-    schedule_interval=None,           # ← 关键：不自动调度
+    schedule_interval=None,  # ← 关键：不自动调度
     start_date=datetime(2024, 1, 1),
     catchup=False,
-    max_active_runs=3,                # 允许同一时间处理多次财报事件
+    max_active_runs=3,  # 允许同一时间处理多次财报事件
     default_args=default_args(retries=3),
     sla_miss_callback=sla_miss_callback,
-    render_template_as_native_obj=True,   # 让 Jinja 渲染后保持原生 Python 类型
+    render_template_as_native_obj=True,  # 让 Jinja 渲染后保持原生 Python 类型
     tags=["yahoo-finance", "earnings", "event-driven"],
 ) as dag:
 
@@ -109,10 +114,7 @@ with DAG(
     S3_PREFIX = "raw/earnings/"
 
     # ── Task 1: 解析 Lambda conf ─────────────────────────────
-    parse_conf = PythonOperator(
-        task_id="parse_conf",
-        python_callable=_parse_conf,
-    )
+    parse_conf = PythonOperator(task_id="parse_conf", python_callable=_parse_conf,)
 
     # ── Task 2: ECS 提取财报数据 ─────────────────────────────
     # symbols 用 Jinja 从 XCom 拉取，只处理有财报的 symbol
@@ -164,9 +166,6 @@ with DAG(
     )
 
     # ── Task 6: Slack 汇报 ──────────────────────────────────
-    notify = PythonOperator(
-        task_id="notify_slack",
-        python_callable=_notify_slack,
-    )
+    notify = PythonOperator(task_id="notify_slack", python_callable=_notify_slack,)
 
     parse_conf >> extract >> load >> quality >> transform >> notify

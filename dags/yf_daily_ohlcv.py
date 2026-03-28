@@ -22,8 +22,11 @@ from airflow.providers.amazon.aws.transfers.s3_to_redshift import S3ToRedshiftOp
 from dag_utils import default_args, sla_miss_callback
 from operators.yahoo_finance_ecs_operator import YahooFinanceOHLCVOperator
 from operators.data_quality_operator import (
-    DataQualityOperator, row_count_check, null_check,
-    duplicate_check, freshness_check,
+    DataQualityOperator,
+    row_count_check,
+    null_check,
+    duplicate_check,
+    freshness_check,
 )
 from yf_config import get_watchlist, get_s3_bucket, get_ecs_config, S3_PARTITION
 
@@ -31,7 +34,7 @@ from yf_config import get_watchlist, get_s3_bucket, get_ecs_config, S3_PARTITION
 with DAG(
     dag_id="yf_daily_ohlcv",
     description="Yahoo Finance /v8/finance/chart → S3 → Redshift (daily OHLCV)",
-    schedule_interval="0 21 * * 1-5",    # 周一到周五 21:00 UTC
+    schedule_interval="0 21 * * 1-5",  # 周一到周五 21:00 UTC
     start_date=datetime(2024, 1, 1),
     catchup=False,
     max_active_runs=1,
@@ -71,7 +74,7 @@ with DAG(
         schema="staging",
         table="yf_ohlcv",
         s3_bucket=S3_BUCKET,
-        s3_key=f"{S3_PREFIX}{S3_PARTITION}",    # Jinja 模板，运行时渲染
+        s3_key=f"{S3_PREFIX}{S3_PARTITION}",  # Jinja 模板，运行时渲染
         copy_options=["FORMAT AS JSON 'auto'", "GZIP", "TIMEFORMAT 'auto'"],
         redshift_conn_id="redshift_default",
         aws_conn_id="aws_default",
@@ -82,20 +85,20 @@ with DAG(
         task_id="quality_checks",
         redshift_conn_id="redshift_default",
         checks=[
-            row_count_check("staging.yf_ohlcv",  min_rows=1),
-            null_check("staging.yf_ohlcv",        "symbol"),
-            null_check("staging.yf_ohlcv",        "close"),
-            duplicate_check("staging.yf_ohlcv",   ["symbol", "date"]),
-            freshness_check("staging.yf_ohlcv",   "_extracted_at", max_age_hours=6),
+            row_count_check("staging.yf_ohlcv", min_rows=1),
+            null_check("staging.yf_ohlcv", "symbol"),
+            null_check("staging.yf_ohlcv", "close"),
+            duplicate_check("staging.yf_ohlcv", ["symbol", "date"]),
+            freshness_check("staging.yf_ohlcv", "_extracted_at", max_age_hours=6),
             {
                 "description": "High >= Low（K线基本逻辑）",
-                "sql":         "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE high < low",
-                "expected":    0,
+                "sql": "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE high < low",
+                "expected": 0,
             },
             {
                 "description": "No negative close price",
-                "sql":         "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE close < 0",
-                "expected":    0,
+                "sql": "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE close < 0",
+                "expected": 0,
             },
         ],
     )

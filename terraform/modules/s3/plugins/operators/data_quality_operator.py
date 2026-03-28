@@ -29,19 +29,24 @@ class DataQualityOperator(BaseOperator):
     ui_color = "#fde8d8"
 
     @apply_defaults
-    def __init__(self, *, checks: list[dict],
-                 redshift_conn_id: str = "redshift_default", **kwargs: Any):
+    def __init__(
+        self,
+        *,
+        checks: list[dict],
+        redshift_conn_id: str = "redshift_default",
+        **kwargs: Any,
+    ):
         super().__init__(**kwargs)
-        self.checks           = checks
+        self.checks = checks
         self.redshift_conn_id = redshift_conn_id
 
     def execute(self, context: dict) -> None:
-        hook     = RedshiftSQLHook(redshift_conn_id=self.redshift_conn_id)
+        hook = RedshiftSQLHook(redshift_conn_id=self.redshift_conn_id)
         failures = []
 
         for check in self.checks:
-            desc     = check.get("description", check["sql"][:60])
-            sql      = check["sql"]
+            desc = check.get("description", check["sql"][:60])
+            sql = check["sql"]
             expected = check["expected"]
 
             log.info("Check: %s", desc)
@@ -70,19 +75,22 @@ class DataQualityOperator(BaseOperator):
 
 # ── 工厂函数：生成常用检查 dict ───────────────────────────────
 
+
 def row_count_check(table: str, min_rows: int = 1) -> dict:
     return {
         "description": f"{table} has >= {min_rows} rows",
-        "sql":         f"SELECT COUNT(*) FROM {table}",
-        "expected":    lambda n: n >= min_rows,
+        "sql": f"SELECT COUNT(*) FROM {table}",
+        "expected": lambda n: n >= min_rows,
     }
+
 
 def null_check(table: str, column: str) -> dict:
     return {
         "description": f"{table}.{column} has no NULLs",
-        "sql":         f"SELECT COUNT(*) FROM {table} WHERE {column} IS NULL",
-        "expected":    0,
+        "sql": f"SELECT COUNT(*) FROM {table} WHERE {column} IS NULL",
+        "expected": 0,
     }
+
 
 def duplicate_check(table: str, keys: list[str]) -> dict:
     key_expr = ", ".join(keys)
@@ -96,6 +104,7 @@ def duplicate_check(table: str, keys: list[str]) -> dict:
         """,
         "expected": 0,
     }
+
 
 def freshness_check(table: str, ts_col: str, max_age_hours: int = 25) -> dict:
     return {
