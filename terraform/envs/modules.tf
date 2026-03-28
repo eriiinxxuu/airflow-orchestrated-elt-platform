@@ -49,6 +49,7 @@ module "mwaa" {
   sns_topic_arn                  = module.sns.topic_arn
   plugins_s3_object_version      = module.s3.plugins_s3_object_version
   requirements_s3_object_version = module.s3.requirements_s3_object_version
+  webserver_access_mode = var.webserver_access_mode
 }
 
 # ── IAM ───────────────────────────────────────────────────────

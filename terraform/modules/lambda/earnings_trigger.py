@@ -108,7 +108,7 @@ def _build_opener():
     crumb = opener.open(crumb_req).read().decode().strip()
 
     if not crumb:
-        raise RuntimeError("Received empty crumb – Yahoo Finance session failed")
+        raise RuntimeError("Received empty crumb - Yahoo Finance session failed")
 
     logger.info("Yahoo Finance session established. crumb=%s", crumb)
     return opener, crumb
