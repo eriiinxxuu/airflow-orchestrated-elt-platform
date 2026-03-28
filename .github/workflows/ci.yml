@@ -75,7 +75,9 @@ jobs:
           pip install \
             "apache-airflow==2.9.2" \
             "apache-airflow-providers-amazon==8.22.0" \
-            boto3 requests
+            boto3 requests \
+            --constraint "https://raw.githubusercontent.com/apache/airflow/constraints-2.9.2/constraints-3.11.txt"
+          pip show apache-airflow-providers-amazon
 
       - name: Validate DAG imports
         run: |
