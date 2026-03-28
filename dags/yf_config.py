@@ -1,18 +1,19 @@
 """
 yf_config.py
 ─────────────
-所有 Yahoo Finance DAG 共用的配置。
-把它抽成独立文件，避免在每个 DAG 里重复同样的代码。
+Shared configuration for all Yahoo Finance DAGs.
+Extracted into a separate file to avoid repeating the same code in every DAG.
 
-Airflow Variable 的好处：
-  watchlist 和 ECS 配置存在 Airflow Variable 里，
-  运维人员可以在 UI 里直接修改，不需要重新部署代码。
+Why use Airflow Variables?
+  Storing the watchlist and ECS config in Airflow Variables means operators
+  can update them directly from the UI without redeploying any code.
 """
 
 from __future__ import annotations
+
 from airflow.models import Variable
 
-# 默认 watchlist（Variable 不存在时的回退值）
+# Default watchlist used as a fallback when the Airflow Variable does not exist
 _DEFAULT_WATCHLIST = [
     "AAPL",
     "MSFT",
@@ -40,27 +41,28 @@ def get_s3_bucket() -> str:
 
 def get_ecs_config() -> dict:
     """
-    读取存储在 Airflow Variable 里的 ECS 运行时配置。
-    Terraform 通过 Secrets Manager → MWAA 自动同步这个 Variable。
+    Read the ECS runtime configuration stored in an Airflow Variable.
 
-    返回的 dict 可以直接用 **get_ecs_config() 展开到 Operator 参数中。
+    Returns a dict that can be unpacked directly into Operator kwargs
+    using **get_ecs_config().
     """
     raw = Variable.get("ecs_config", deserialize_json=True)
     return {
-        "cluster": raw["cluster_arn"],
-        "task_definition": raw["task_definition"],
-        "container_name": raw["container_name"],
-        "subnets": (
+        "cluster":          raw["cluster_arn"],
+        "task_definition":  raw["task_definition"],
+        "container_name":   raw["container_name"],
+        "subnets":          (
             raw["subnets"]
             if isinstance(raw["subnets"], list)
             else raw["subnets"].split(",")
         ),
-        "security_groups": [raw["security_group"]],
+        "security_groups":  [raw["security_group"]],
     }
 
 
-# Jinja 模板：S3 分区前缀，在 S3ToRedshiftOperator 的 s3_key 里使用
-# execution_date 是 Airflow 传入的逻辑执行时间，不是当前时间
+# Jinja template for the S3 partition prefix used in S3ToRedshiftOperator s3_key.
+# execution_date is the logical execution time provided by Airflow,
+# not the current wall-clock time.
 S3_PARTITION = (
     "year={{ execution_date.year }}/"
     "month={{ '{:02d}'.format(execution_date.month) }}/"

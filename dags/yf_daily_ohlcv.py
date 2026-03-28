@@ -1,15 +1,16 @@
 """
 yf_daily_ohlcv.py
 ──────────────────
-每日 OHLCV 价格数据管道。
+Daily OHLCV price data pipeline.
 
-调度时间：周一到周五 21:00 UTC
-  → 美股 20:00 UTC 收盘，等 1 小时让 Yahoo Finance 数据稳定
+Schedule: Monday to Friday at 21:00 UTC
+  - US markets close at 20:00 UTC; waiting 1 hour allows Yahoo Finance
+    data to stabilise before extraction
 
-SLA：23:00 UTC 前必须完成（2小时窗口）
+SLA: Must complete by 23:00 UTC (2-hour window)
 
-任务链：
-  extract_ohlcv → load_staging → quality_checks → transform
+Task chain:
+  extract_ohlcv -> load_staging -> quality_checks -> transform
 """
 
 from __future__ import annotations
@@ -33,9 +34,9 @@ from yf_config import get_watchlist, get_s3_bucket, get_ecs_config, S3_PARTITION
 
 with DAG(
     dag_id="yf_daily_ohlcv",
-    description="Yahoo Finance /v8/finance/chart → S3 → Redshift (daily OHLCV)",
-    schedule_interval="0 21 * * 1-5",  # 周一到周五 21:00 UTC
-    start_date=datetime(2024, 1, 1),
+    description="Yahoo Finance /v8/finance/chart -> S3 -> Redshift (daily OHLCV)",
+    schedule_interval="0 21 * * 1-5",
+    start_date=datetime(2026, 3, 28),
     catchup=False,
     max_active_runs=1,
     default_args=default_args(retries=2),
@@ -46,12 +47,12 @@ with DAG(
     S3_BUCKET = get_s3_bucket()
     S3_PREFIX = "raw/ohlcv/"
 
-    # ── Task 1: 启动 ECS 任务抓取 OHLCV ─────────────────────
-    # YahooFinanceOHLCVOperator 内部会：
-    #   1. 构建 S3 key（含日期分区）
-    #   2. 把参数打包成 ECS 环境变量
-    #   3. 调用 RunTask + 轮询
-    #   4. 把 s3:// 路径写入 XCom
+    # ── Task 1: Launch ECS task to extract OHLCV ─────────────
+    # YahooFinanceOHLCVOperator internally:
+    #   1. Builds the S3 key with date partitioning
+    #   2. Packs parameters into ECS environment variables
+    #   3. Calls RunTask and polls until STOPPED
+    #   4. Writes the s3:// path to XCom
     extract = YahooFinanceOHLCVOperator(
         task_id="extract_ohlcv",
         symbols=get_watchlist(),
@@ -63,24 +64,24 @@ with DAG(
         **get_ecs_config(),
     )
 
-    # ── Task 2: 把 S3 文件 COPY 到 Redshift staging ──────────
-    # S3ToRedshiftOperator 内部执行：
+    # ── Task 2: COPY S3 file into Redshift staging ────────────
+    # S3ToRedshiftOperator executes:
     #   COPY staging.yf_ohlcv FROM 's3://bucket/raw/ohlcv/year=.../...'
-    #   FORMAT AS JSON 'auto'   ← 自动映射 JSON key 到列名
-    #   GZIP                    ← 读取压缩文件
-    #   TIMEFORMAT 'auto'       ← 自动解析时间戳格式
+    #   FORMAT AS JSON 'auto'   <- automatically maps JSON keys to columns
+    #   GZIP                    <- reads compressed files
+    #   TIMEFORMAT 'auto'       <- automatically parses timestamp formats
     load = S3ToRedshiftOperator(
         task_id="load_staging",
         schema="staging",
         table="yf_ohlcv",
         s3_bucket=S3_BUCKET,
-        s3_key=f"{S3_PREFIX}{S3_PARTITION}",  # Jinja 模板，运行时渲染
+        s3_key=f"{S3_PREFIX}{S3_PARTITION}",  # Jinja template, rendered at runtime
         copy_options=["FORMAT AS JSON 'auto'", "GZIP", "TIMEFORMAT 'auto'"],
         redshift_conn_id="redshift_default",
         aws_conn_id="aws_default",
     )
 
-    # ── Task 3: 数据质检 ─────────────────────────────────────
+    # ── Task 3: Data quality checks ───────────────────────────
     quality = DataQualityOperator(
         task_id="quality_checks",
         redshift_conn_id="redshift_default",
@@ -91,24 +92,24 @@ with DAG(
             duplicate_check("staging.yf_ohlcv", ["symbol", "date"]),
             freshness_check("staging.yf_ohlcv", "_extracted_at", max_age_hours=6),
             {
-                "description": "High >= Low（K线基本逻辑）",
-                "sql": "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE high < low",
-                "expected": 0,
+                "description": "High >= Low (basic candlestick sanity check)",
+                "sql":         "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE high < low",
+                "expected":    0,
             },
             {
                 "description": "No negative close price",
-                "sql": "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE close < 0",
-                "expected": 0,
+                "sql":         "SELECT COUNT(*) FROM staging.yf_ohlcv WHERE close < 0",
+                "expected":    0,
             },
         ],
     )
 
-    # ── Task 4: SQL 转换 → fact 表 ───────────────────────────
+    # ── Task 4: SQL transformation -> fact table ──────────────
     transform = RedshiftSQLOperator(
         task_id="transform_fact_daily_prices",
         sql="sql/facts/fact_daily_prices.sql",
         redshift_conn_id="redshift_default",
     )
 
-    # 线性依赖链
+    # Linear dependency chain
     extract >> load >> quality >> transform

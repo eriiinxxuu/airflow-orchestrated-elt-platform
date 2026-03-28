@@ -1,14 +1,15 @@
 """
 yf_daily_fundamentals.py
 ─────────────────────────
-每日基本面快照管道。
+Daily fundamentals snapshot pipeline.
 
-调度时间：周一到周五 22:00 UTC
-  → 比 OHLCV DAG 晚 1 小时，避免同时大量抓取触发 Yahoo 限流
-  → 不依赖 OHLCV DAG 的结果，可以独立失败/重跑
+Schedule: Monday to Friday at 22:00 UTC
+  - Runs 1 hour after the OHLCV DAG to avoid simultaneous extraction
+    hammering Yahoo Finance rate limits
+  - Independent of the OHLCV DAG — can fail and be retried separately
 
-任务链：
-  extract_fundamentals → load_staging → quality_checks → transform
+Task chain:
+  extract_fundamentals -> load_staging -> quality_checks -> transform
 """
 
 from __future__ import annotations
@@ -31,7 +32,7 @@ from yf_config import get_watchlist, get_s3_bucket, get_ecs_config, S3_PARTITION
 
 with DAG(
     dag_id="yf_daily_fundamentals",
-    description="Yahoo Finance /v10/quoteSummary → S3 → Redshift (daily fundamentals)",
+    description="Yahoo Finance /v10/quoteSummary -> S3 -> Redshift (daily fundamentals)",
     schedule_interval="0 22 * * 1-5",
     start_date=datetime(2024, 1, 1),
     catchup=False,

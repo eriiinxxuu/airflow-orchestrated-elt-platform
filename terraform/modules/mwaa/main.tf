@@ -230,12 +230,14 @@ resource "aws_mwaa_environment" "main" {
   max_workers        = var.max_workers
   schedulers         = var.schedulers
   execution_role_arn = aws_iam_role.mwaa_execution.arn
+  
 
   # S3 sources
   source_bucket_arn    = var.s3_bucket_arn
   dag_s3_path          = var.dag_s3_path
   plugins_s3_path      = var.plugins_s3_path
   requirements_s3_path = var.requirements_s3_path
+  requirements_s3_object_version  = var.requirements_s3_object_version
 
   network_configuration {
     security_group_ids = [aws_security_group.mwaa.id]
