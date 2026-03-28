@@ -31,6 +31,7 @@ import boto3
 import requests
 from requests.adapters import HTTPAdapter
 from urllib3.util.retry import Retry
+import random
 
 # ─────────────────────────────────────────────────────────────
 # Logging
@@ -84,17 +85,6 @@ BROWSER_UA = (
 def build_session() -> tuple[requests.Session, str]:
     """
     Establish a Yahoo Finance HTTP session and obtain a crumb token.
-
-    Why is a crumb needed?
-    Yahoo Finance uses a crumb as an anti-CSRF token on the v10 quoteSummary API.
-    You must first visit the homepage to receive a session cookie, then call
-    /v1/test/getcrumb to exchange the cookie for a crumb. Every subsequent API
-    request must include this crumb as a query parameter.
-
-    Why configure Retry?
-    Yahoo Finance returns 429 Too Many Requests under high request frequency.
-    HTTPAdapter + Retry handles waiting and retrying automatically.
-    respect_retry_after_header=True means we honour Yahoo's Retry-After header.
     """
     session = requests.Session()
 
@@ -121,9 +111,11 @@ def build_session() -> tuple[requests.Session, str]:
 
     # Step 1: visit homepage so Yahoo sets the session cookie
     log.info("Establishing Yahoo Finance session ...")
+    time.sleep(random.uniform(2, 5))
     session.get(CONSENT_URL, timeout=15)
 
     # Step 2: exchange the cookie for a crumb token
+    time.sleep(random.uniform(1, 3)) 
     resp = session.get(CRUMB_URL, timeout=15)
     resp.raise_for_status()
     crumb = resp.text.strip()
@@ -194,8 +186,6 @@ def extract_ohlcv(
       }
     }
 
-    All price fields are aligned arrays: the i-th timestamp corresponds to
-    the i-th open/high/low/close/volume. Index alignment is required.
     """
     log.info(
         "[%s] Fetching OHLCV interval=%s range=%s",
