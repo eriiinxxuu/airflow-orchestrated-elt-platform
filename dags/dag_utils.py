@@ -3,6 +3,7 @@ dag_utils.py
 ─────────────
 Shared callbacks and default args factory used across all DAGs.
 """
+
 from __future__ import annotations
 
 import logging
@@ -26,7 +27,9 @@ def send_sns_message(subject: str, message: str) -> None:
     topic_arn = Variable.get("sns_topic_arn")
     try:
         boto3.client("sns").publish(
-            TopicArn=topic_arn, Subject=subject, Message=message,
+            TopicArn=topic_arn,
+            Subject=subject,
+            Message=message,
         )
     except Exception as exc:
         log.error("SNS notification failed: %s", exc)

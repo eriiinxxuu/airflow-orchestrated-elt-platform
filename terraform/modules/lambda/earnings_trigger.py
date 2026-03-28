@@ -116,7 +116,10 @@ def _build_opener():
 
 # ── Earnings date check ───────────────────────────────────────
 def _check_earnings_date(
-    symbol: str, opener, crumb: str, target_dates: set,
+    symbol: str,
+    opener,
+    crumb: str,
+    target_dates: set,
 ) -> str | None:
     url = (
         f"{YAHOO_SUMMARY}/{symbol}"
@@ -148,7 +151,9 @@ def _check_earnings_date(
 
 # ── Airflow REST API ──────────────────────────────────────────
 def _trigger_dag(
-    symbols: list[str], earnings_dates: dict[str, str], token: str,
+    symbols: list[str],
+    earnings_dates: dict[str, str],
+    token: str,
 ) -> None:
 
     run_id = f"earnings_{datetime.utcnow().strftime('%Y%m%dT%H%M%S')}"

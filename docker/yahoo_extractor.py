@@ -435,7 +435,11 @@ def extract_earnings(
     body = _get(
         session,
         f"{BASE_SUMMARY}/{symbol}",
-        params={"modules": EARNINGS_MODULES, "crumb": crumb, "formatted": "false",},
+        params={
+            "modules": EARNINGS_MODULES,
+            "crumb": crumb,
+            "formatted": "false",
+        },
         label=f"earnings:{symbol}",
     )
 
@@ -631,7 +635,7 @@ def fetch_with_retry(
             return extract_fn(symbol, config, session, crumb)
         except Exception as exc:
             last_exc = exc
-            wait = config.RETRY_BACKOFF ** attempt
+            wait = config.RETRY_BACKOFF**attempt
             log.warning(
                 "[%s] attempt %d/%d failed: %s  (retry in %.1fs)",
                 symbol,

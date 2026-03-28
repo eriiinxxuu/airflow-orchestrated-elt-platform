@@ -8,6 +8,7 @@ Airflow Variable 的好处：
   watchlist 和 ECS 配置存在 Airflow Variable 里，
   运维人员可以在 UI 里直接修改，不需要重新部署代码。
 """
+
 from __future__ import annotations
 from airflow.models import Variable
 
@@ -49,9 +50,11 @@ def get_ecs_config() -> dict:
         "cluster": raw["cluster_arn"],
         "task_definition": raw["task_definition"],
         "container_name": raw["container_name"],
-        "subnets": raw["subnets"]
-        if isinstance(raw["subnets"], list)
-        else raw["subnets"].split(","),
+        "subnets": (
+            raw["subnets"]
+            if isinstance(raw["subnets"], list)
+            else raw["subnets"].split(",")
+        ),
         "security_groups": [raw["security_group"]],
     }
 

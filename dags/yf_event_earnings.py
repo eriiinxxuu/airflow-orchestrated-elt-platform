@@ -25,6 +25,7 @@ DAG 通过 context["dag_run"].conf 读取上面的 conf，
   parse_conf → extract_earnings → load_staging
              → quality_checks  → transform → notify_slack
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -114,7 +115,10 @@ with DAG(
     S3_PREFIX = "raw/earnings/"
 
     # ── Task 1: 解析 Lambda conf ─────────────────────────────
-    parse_conf = PythonOperator(task_id="parse_conf", python_callable=_parse_conf,)
+    parse_conf = PythonOperator(
+        task_id="parse_conf",
+        python_callable=_parse_conf,
+    )
 
     # ── Task 2: ECS 提取财报数据 ─────────────────────────────
     # symbols 用 Jinja 从 XCom 拉取，只处理有财报的 symbol
@@ -166,6 +170,9 @@ with DAG(
     )
 
     # ── Task 6: Slack 汇报 ──────────────────────────────────
-    notify = PythonOperator(task_id="notify_slack", python_callable=_notify_slack,)
+    notify = PythonOperator(
+        task_id="notify_slack",
+        python_callable=_notify_slack,
+    )
 
     parse_conf >> extract >> load >> quality >> transform >> notify

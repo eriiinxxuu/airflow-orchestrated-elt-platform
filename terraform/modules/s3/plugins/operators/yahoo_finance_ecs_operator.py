@@ -142,7 +142,10 @@ class YahooFinanceECSOperator(BaseOperator):
             },
             overrides={
                 "containerOverrides": [
-                    {"name": self.container_name, "environment": env,}
+                    {
+                        "name": self.container_name,
+                        "environment": env,
+                    }
                 ]
             },
             tags=[

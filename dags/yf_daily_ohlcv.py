@@ -11,6 +11,7 @@ SLA：23:00 UTC 前必须完成（2小时窗口）
 任务链：
   extract_ohlcv → load_staging → quality_checks → transform
 """
+
 from __future__ import annotations
 
 from datetime import datetime, timedelta
@@ -29,7 +30,6 @@ from operators.data_quality_operator import (
     freshness_check,
 )
 from yf_config import get_watchlist, get_s3_bucket, get_ecs_config, S3_PARTITION
-
 
 with DAG(
     dag_id="yf_daily_ohlcv",
