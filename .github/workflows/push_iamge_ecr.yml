@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - "docker/**"
+  workflow_dispatch:
 
 env:
   AWS_REGION:   ap-southeast-2
