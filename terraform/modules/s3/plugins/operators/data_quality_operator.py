@@ -52,7 +52,7 @@ class DataQualityOperator(BaseOperator):
             log.info("Check: %s", desc)
             rows = hook.get_records(sql)
 
-            if not rows or rows[0][0] is None:
+            if not rows or not rows[0] or rows[0][0] is None:
                 failures.append(f"FAIL [{desc}] – no result returned")
                 continue
 
