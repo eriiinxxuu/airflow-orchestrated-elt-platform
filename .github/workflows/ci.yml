@@ -35,10 +35,10 @@ jobs:
             --extend-ignore=E221,E127,E131,E261,E272,E302,E303,E402,W391,W293,E231
 
       - name: Lint - black
-              run: |
-                black dags/ docker/ \
-                  terraform/modules/lambda/earnings_trigger.py \
-                  terraform/modules/s3/plugins/operators/
+        run: |
+          black dags/ docker/ \
+            terraform/modules/lambda/earnings_trigger.py \
+            terraform/modules/s3/plugins/operators/
 
       - name: Run unit tests
         run: |
