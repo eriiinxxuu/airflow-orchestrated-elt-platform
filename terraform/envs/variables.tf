@@ -77,3 +77,13 @@ variable "alert_email" {
   description = "Email address to receive pipeline failure alerts via SNS"
   type        = string
 }
+
+variable "github_org" {
+  description = "GitHub username or organisation"
+  type        = string
+}
+
+variable "github_repo" {
+  description = "GitHub repository name"
+  type        = string
+}

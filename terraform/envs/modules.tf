@@ -56,6 +56,8 @@ module "iam" {
   source       = "../modules/iam"
   environment  = var.environment
   mwaa_env_arn = module.mwaa.environment_arn
+  github_org   = var.github_org
+  github_repo  = var.github_repo
 }
 
 # ── CloudWatch ────────────────────────────────────────────────

@@ -88,3 +88,8 @@ output "redshift_s3_iam_role_arn" {
   description = "IAM role ARN used in Redshift COPY statements"
   value       = module.redshift.s3_iam_role_arn
 }
+
+output "github_actions_role_arn" {
+  description = "Copy this ARN to GitHub Settings -> Secrets -> AWS_ROLE_ARN"
+  value       = module.iam.github_actions_role_arn
+}
