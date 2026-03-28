@@ -33,7 +33,7 @@ from datetime import datetime, timedelta
 from airflow import DAG
 from airflow.operators.python import PythonOperator
 
-from airflow.providers.amazon.aws.operators.redshift_sql import RedshiftSQLOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.amazon.aws.transfers.s3_to_redshift import S3ToRedshiftOperator
 
 from dag_utils import default_args, sla_miss_callback, send_sns_message
@@ -166,10 +166,10 @@ with DAG(
     )
 
     # ── Task 5: Transform into fact table ─────────────────────
-    transform = RedshiftSQLOperator(
+    transform = SQLExecuteQueryOperator(
         task_id="transform_fact_earnings",
         sql="sql/facts/fact_earnings_surprises.sql",
-        redshift_conn_id="redshift_default",
+        conn_id="redshift_default",
     )
 
     # ── Task 6: SNS completion notification ───────────────────

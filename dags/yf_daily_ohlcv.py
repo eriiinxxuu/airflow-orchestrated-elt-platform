@@ -18,7 +18,7 @@ from __future__ import annotations
 from datetime import datetime, timedelta
 
 from airflow import DAG
-from airflow.providers.amazon.aws.operators.redshift_sql import RedshiftSQLOperator
+from airflow.providers.common.sql.operators.sql import SQLExecuteQueryOperator
 from airflow.providers.amazon.aws.transfers.s3_to_redshift import S3ToRedshiftOperator
 
 from dag_utils import default_args, sla_miss_callback
@@ -105,10 +105,10 @@ with DAG(
     )
 
     # ── Task 4: SQL transformation -> fact table ──────────────
-    transform = RedshiftSQLOperator(
+    transform = SQLExecuteQueryOperator(
         task_id="transform_fact_daily_prices",
         sql="sql/facts/fact_daily_prices.sql",
-        redshift_conn_id="redshift_default",
+        conn_id="redshift_default",
     )
 
     # Linear dependency chain
