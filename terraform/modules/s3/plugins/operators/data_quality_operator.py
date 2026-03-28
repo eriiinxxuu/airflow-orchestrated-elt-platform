@@ -13,7 +13,7 @@ data_quality_operator.py
 from __future__ import annotations
 
 import logging
-from typing import Any, Callable
+from typing import Any
 
 from airflow.exceptions import AirflowException
 from airflow.models import BaseOperator

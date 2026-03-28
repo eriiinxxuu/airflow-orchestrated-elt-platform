@@ -41,7 +41,7 @@ import logging
 import os
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta
 from zoneinfo import ZoneInfo
 
 SYDNEY_TZ = ZoneInfo("Australia/Sydney")

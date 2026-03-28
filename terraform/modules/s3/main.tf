@@ -127,7 +127,7 @@ resource "aws_s3_object" "requirements_txt" {
 # Syncs all .py files from the dags/ directory.
 # etag ensures Terraform re-uploads whenever a DAG file changes.
 locals {
-  dag_files = fileset("${path.module}/dags", "*.py")
+  dag_files = fileset("${path.module}/../../../dags", "*.py")
 }
 
 resource "aws_s3_object" "dags" {
@@ -137,4 +137,19 @@ resource "aws_s3_object" "dags" {
   key    = "dags/${each.value}"
   source = "${path.module}/../../../dags/${each.value}"
   etag   = filemd5("${path.module}/../../../dags/${each.value}")
+}
+
+# ── SSM Parameters ────────────────────────────────────────────
+# Store bucket names in SSM so GitHub Actions can retrieve them
+# without hardcoding values in workflow files
+resource "aws_ssm_parameter" "mwaa_bucket_name" {
+  name  = "/yf-elt/${var.environment}/mwaa_bucket_name"
+  type  = "String"
+  value = aws_s3_bucket.mwaa.bucket
+}
+
+resource "aws_ssm_parameter" "data_bucket_name" {
+  name  = "/yf-elt/${var.environment}/data_bucket_name"
+  type  = "String"
+  value = aws_s3_bucket.data.bucket
 }
