@@ -86,3 +86,4 @@ def default_args(retries: int = 2) -> dict:
         "email_on_failure":          False,
         "email_on_retry":            False,
     }
+
