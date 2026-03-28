@@ -1,0 +1,56 @@
+name: Build & Push to ECR
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "docker/**"
+
+env:
+  AWS_REGION:   ap-southeast-2
+  ECR_REPO:     yf-elt-extractor-dev
+
+jobs:
+  build-and-push:
+    name: Build, Scan & Push
+    runs-on: ubuntu-latest
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build image
+        env:
+          IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}
+        run: |
+          docker build \
+            --tag $IMAGE_URI:${{ github.sha }} \
+            --tag $IMAGE_URI:latest \
+            docker/
+
+      - name: Trivy security scan
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}:${{ github.sha }}
+          exit-code: "1"
+          severity: CRITICAL,HIGH
+
+      - name: Push to ECR
+        env:
+          IMAGE_URI: ${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPO }}
+        run: |
+          docker push $IMAGE_URI:${{ github.sha }}
+          docker push $IMAGE_URI:latest

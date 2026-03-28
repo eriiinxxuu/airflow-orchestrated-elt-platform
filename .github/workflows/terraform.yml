@@ -1,0 +1,109 @@
+name: Terraform Deploy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - "terraform/modules/s3/plugins/**"
+  pull_request:
+    branches: [main]
+    paths:
+      - "terraform/**"
+      - "terraform/modules/s3/plugins/**"
+
+env:
+  AWS_REGION:   ap-southeast-2
+  TF_VERSION:   1.7.4
+  TF_WORK_DIR:  terraform/envs
+
+jobs:
+  terraform-plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORK_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Validate
+        working-directory: ${{ env.TF_WORK_DIR }}
+        run: terraform validate
+
+      - name: Terraform Plan
+        id: plan
+        working-directory: ${{ env.TF_WORK_DIR }}
+        env:
+          TF_VAR_redshift_admin_password: ${{ secrets.REDSHIFT_PASSWORD }}
+          TF_VAR_alert_email:              ${{ secrets.ALERT_EMAIL }}
+        run: terraform plan -no-color 2>&1 | tee plan.txt
+
+      - name: Comment plan on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs   = require('fs');
+            const plan = fs.readFileSync('${{ env.TF_WORK_DIR }}/plan.txt', 'utf8');
+            const body = plan.length > 60000
+              ? plan.slice(0, 60000) + '\n...(truncated)'
+              : plan;
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner:        context.repo.owner,
+              repo:         context.repo.repo,
+              body:         `## Terraform Plan\n\`\`\`\n${body}\n\`\`\``
+            });
+
+  terraform-apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+
+    permissions:
+      id-token: write
+      contents: read
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        working-directory: ${{ env.TF_WORK_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform Apply
+        working-directory: ${{ env.TF_WORK_DIR }}
+        env:
+          TF_VAR_redshift_admin_password: ${{ secrets.REDSHIFT_PASSWORD }}
+          TF_VAR_alert_email:              ${{ secrets.ALERT_EMAIL }}
+        run: terraform apply -auto-approve -input=false

@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    name: Lint & Unit Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+
+      - name: Install dependencies
+        run: |
+          pip install \
+            flake8 black \
+            pytest pytest-cov \
+            boto3 requests moto
+
+      - name: Lint - flake8
+        run: |
+          flake8 dags/ docker/ \
+            terraform/modules/lambda/earnings_trigger.py \
+            terraform/modules/s3/plugins/operators/ \
+            --max-line-length=100 --extend-ignore=E203
+
+      - name: Lint - black
+        run: |
+          black --check dags/ docker/ \
+            terraform/modules/lambda/earnings_trigger.py \
+            terraform/modules/s3/plugins/operators/
+
+      - name: Run unit tests
+        run: pytest tests/ -v --cov=terraform/modules/s3/plugins --cov=docker --cov=terraform/modules/lambda --cov-report=xml
+
+  validate-dags:
+    name: Validate DAG Imports
+    runs-on: ubuntu-latest
+    needs: lint-and-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Airflow
+        run: |
+          pip install \
+            apache-airflow==2.9.2 \
+            apache-airflow-providers-amazon \
+            boto3 requests
+
+      - name: Validate DAG imports
+        run: |
+          airflow db init
+          python -c "
+          import sys
+          sys.path.insert(0, 'dags')
+          sys.path.insert(0, 'terraform/modules/s3/plugins')
+          from airflow.models import DagBag
+          db = DagBag(dag_folder='dags', include_examples=False)
+          if db.import_errors:
+              for f, e in db.import_errors.items():
+                  print(f'Import error in {f}: {e}')
+              sys.exit(1)
+          print(f'OK — loaded {len(db.dags)} DAGs: {list(db.dags.keys())}')
+          "
