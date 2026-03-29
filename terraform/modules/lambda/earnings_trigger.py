@@ -8,30 +8,6 @@ Responsibilities:
   2. Check whether any symbol has earnings today or tomorrow
   3. Found     -> call the Airflow REST API to trigger yf_event_earnings DAG
   4. Not found -> exit silently, DAG never starts
-
-Why Lambda instead of a ShortCircuitOperator inside the DAG?
-  - A DAG run has scheduling overhead (MWAA worker must spin up every time)
-  - Lambda is far lighter for a simple check that runs in seconds
-  - Separation of concerns: event detection vs data extraction are different jobs
-  - Setting schedule_interval=None on the DAG keeps the architecture clean
-
-Why urllib instead of requests?
-  - Smaller deployment package means faster cold starts
-  - urllib is part of the standard library, no extra dependencies to package
-  - The logic here is simple enough that Session/retry abstractions are not needed
-
-Authentication: MWAA IAM token (CreateWebLoginToken)
-  - No credentials stored anywhere
-  - Lambda IAM role is granted airflow:CreateWebLoginToken
-  - boto3 exchanges the role for a short-lived web login token (~60s)
-  - Token is passed as a Bearer header on the DAG trigger request
-
-Environment variables (injected by Terraform):
-  AIRFLOW_BASE_URL    MWAA webserver URL
-  AIRFLOW_DAG_ID      Target DAG ID (default: yf_event_earnings)
-  MWAA_ENV_NAME       MWAA environment name used to generate the token
-  WATCHLIST           JSON array string e.g. '["AAPL","MSFT"]'
-  DAYS_AHEAD          How many days ahead to look for earnings (default: 1)
 """
 
 from __future__ import annotations
@@ -48,6 +24,7 @@ SYDNEY_TZ = ZoneInfo("Australia/Sydney")
 from typing import Any
 
 import boto3
+import base64
 
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
@@ -151,15 +128,20 @@ def _check_earnings_date(
 
 # ── Airflow REST API ──────────────────────────────────────────
 def _trigger_dag(symbols, earnings_dates, cli_token, hostname):
-    import base64
+
+    conf_dict = {
+          "symbols": symbols,
+          "earnings_dates": earnings_dates,
+          "triggered_by": "earnings_trigger_lambda"
+      }
 
     payload = (
-        f"dags trigger {AIRFLOW_DAG_ID} --conf '{json.dumps({'symbols': symbols})}'"
+        f"dags trigger {AIRFLOW_DAG_ID} --conf '{json.dumps(conf_dict)}'"
     )
 
     req = urllib.request.Request(
         f"https://{hostname}/aws_mwaa/cli",
-        data=payload.encode(),
+        data=payload.encode('utf-8'),
         headers={
             "Content-Type": "text/plain",
             "Authorization": f"Bearer {cli_token}",
