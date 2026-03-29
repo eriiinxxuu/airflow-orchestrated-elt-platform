@@ -4,6 +4,9 @@
 An end-to-end ELT pipeline that extracts financial data from Yahoo Finance via REST API, loads it into Redshift Serverless, and transforms it into analytics-ready fact tables — fully automated with Airflow on MWAA and deployed via Terraform + GitHub Actions.
 
 ## 👀 Architecture
+
+
+
 ## 🔍 Project Structure
 
 ```
@@ -37,6 +40,29 @@ An end-to-end ELT pipeline that extracts financial data from Yahoo Finance via R
 ```
 
 ## 🛠️ Technical Skills
+
+
+## CI/CD workflows
+ 
+| Workflow | Trigger | Action |
+|---------|---------|--------|
+| `ci.yml` | All pushes / PRs | flake8, black auto-format, pytest (49 tests) |
+| `push_iamge_ecr.yml` | `docker/` changes | Build, Trivy scan, push to ECR |
+| `terraform.yml` | `terraform/` or `plugins/` changes | `terraform plan` on PR / `terraform apply` on main |
+| `sync_dag_s3.yml` | `dags/` changes | `aws s3 sync` to MWAA bucket |
+
+## DAG task chains
+ 
+**yf_daily_ohlcv** and **yf_daily_fundamentals**:
+```
+extract (ECS Fargate) -> load_staging (S3 COPY) -> quality_checks -> transform (SQL)
+```
+ 
+**yf_event_earnings**:
+```
+parse_conf -> extract (ECS Fargate) -> load_staging -> quality_checks -> transform -> notify_sns
+```
+
 
 ## Getting started
 See [deployment.md](deployment.md) for full deployment instructions.
