@@ -130,18 +130,16 @@ def _check_earnings_date(
 def _trigger_dag(symbols, earnings_dates, cli_token, hostname):
 
     conf_dict = {
-          "symbols": symbols,
-          "earnings_dates": earnings_dates,
-          "triggered_by": "earnings_trigger_lambda"
-      }
+        "symbols": symbols,
+        "earnings_dates": earnings_dates,
+        "triggered_by": "earnings_trigger_lambda",
+    }
 
-    payload = (
-        f"dags trigger {AIRFLOW_DAG_ID} --conf '{json.dumps(conf_dict)}'"
-    )
+    payload = f"dags trigger {AIRFLOW_DAG_ID} --conf '{json.dumps(conf_dict)}'"
 
     req = urllib.request.Request(
         f"https://{hostname}/aws_mwaa/cli",
-        data=payload.encode('utf-8'),
+        data=payload.encode("utf-8"),
         headers={
             "Content-Type": "text/plain",
             "Authorization": f"Bearer {cli_token}",
