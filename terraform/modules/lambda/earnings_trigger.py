@@ -198,8 +198,8 @@ def handler(event: dict, context: Any) -> dict:
     logger.info("Triggering DAG for %d symbol(s): %s", len(symbols), symbols)
 
     # Generate the token as late as possible since it expires in ~60 seconds
-    token = _get_mwaa_token()
-    _trigger_dag(symbols, upcoming, token)
+    token, hostname = _get_mwaa_token()
+    _trigger_dag(symbols, upcoming, token, hostname)
 
     return {
         "triggered": True,
