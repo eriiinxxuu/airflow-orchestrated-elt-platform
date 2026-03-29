@@ -115,7 +115,7 @@ def build_session() -> tuple[requests.Session, str]:
     session.get(CONSENT_URL, timeout=15)
 
     # Step 2: exchange the cookie for a crumb token
-    time.sleep(random.uniform(1, 3)) 
+    time.sleep(3) 
     resp = session.get(CRUMB_URL, timeout=15)
     resp.raise_for_status()
     crumb = resp.text.strip()

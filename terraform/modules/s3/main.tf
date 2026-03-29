@@ -8,7 +8,7 @@ resource "aws_s3_bucket" "mwaa" {
   bucket = "yf-elt-mwaa-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
@@ -43,7 +43,7 @@ resource "aws_s3_bucket" "data" {
   bucket = "yf-elt-data-${var.environment}-${data.aws_caller_identity.current.account_id}"
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
