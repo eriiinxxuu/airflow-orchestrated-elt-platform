@@ -38,12 +38,17 @@ def _apply_defaults(fn):
 
 
 sys.modules["airflow.models"].BaseOperator         = _BaseOperator
-sys.modules["airflow.exceptions"].AirflowException = type("AirflowException", (Exception,), {})
+
+if not hasattr(sys.modules["airflow.exceptions"], "AirflowException"):
+    sys.modules["airflow.exceptions"].AirflowException = type("AirflowException", (Exception,), {})
+
+_AirflowException = sys.modules["airflow.exceptions"].AirflowException
+
 sys.modules["airflow.utils.decorators"].apply_defaults = _apply_defaults
 
 # Stub RedshiftSQLHook so data_quality_operator.py can be imported
 sys.modules["airflow.providers.amazon.aws.hooks.redshift_sql"].RedshiftSQLHook = MagicMock
-_AirflowException = sys.modules["airflow.exceptions"].AirflowException
+
 
 
 sys.path.insert(0, "terraform/modules/s3/plugins")
