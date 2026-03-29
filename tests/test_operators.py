@@ -11,7 +11,7 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import pytest
-
+_AirflowException = sys.modules["airflow.exceptions"].AirflowException
 # ── Stub Airflow modules ──────────────────────────────────────
 # Allows importing operators without a running Airflow installation
 

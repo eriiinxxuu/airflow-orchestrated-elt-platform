@@ -120,6 +120,7 @@ sys.modules["airflow.providers.amazon.aws.transfers.s3_to_redshift"].S3ToRedshif
 sys.modules["airflow.providers.amazon.aws.hooks.redshift_sql"].RedshiftSQLHook           = MagicMock
 sys.modules["airflow"].DAG = MagicMock
 sys.modules["airflow.providers.common.sql.operators.sql"].SQLExecuteQueryOperator = MagicMock
+sys.modules["airflow.models"].Variable.get = mock_variable_get 
 
 sys.path.insert(0, "dags")
 sys.path.insert(0, "terraform/modules/s3/plugins")
@@ -374,7 +375,6 @@ class TestEarningsDag(unittest.TestCase):
 # Run
 # ─────────────────────────────────────────────────────────────
 if __name__ == "__main__":
-    sys.modules["airflow.models"].Variable.get = mock_variable_get
 
     print("=" * 60)
     print("DAG end-to-end logic test (mock data)")
