@@ -11,7 +11,8 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 import pytest
-_AirflowException = sys.modules["airflow.exceptions"].AirflowException
+
+
 # ── Stub Airflow modules ──────────────────────────────────────
 # Allows importing operators without a running Airflow installation
 
@@ -46,6 +47,7 @@ sys.modules["airflow.utils.decorators"].apply_defaults = _apply_defaults
 
 # Stub RedshiftSQLHook so data_quality_operator.py can be imported
 sys.modules["airflow.providers.amazon.aws.hooks.redshift_sql"].RedshiftSQLHook = MagicMock
+_AirflowException = sys.modules["airflow.exceptions"].AirflowException
 
 sys.path.insert(0, "terraform/modules/s3/plugins")
 from operators.data_quality_operator import (
