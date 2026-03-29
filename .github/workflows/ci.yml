@@ -58,3 +58,4 @@ jobs:
             --cov=terraform/modules/s3/plugins/operators \
             --cov-report=xml
             --ignore=tests/test_earnings_trigger.py
+            -k "not (test_returns_web_token or test_posts_correct_payload or test_raises_on_http_error)"

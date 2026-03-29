@@ -33,10 +33,6 @@ class _BaseOperator:
         pass
 
 
-class _AirflowException(Exception):
-    pass
-
-
 def _apply_defaults(fn):
     return fn
 
@@ -48,6 +44,7 @@ sys.modules["airflow.utils.decorators"].apply_defaults = _apply_defaults
 # Stub RedshiftSQLHook so data_quality_operator.py can be imported
 sys.modules["airflow.providers.amazon.aws.hooks.redshift_sql"].RedshiftSQLHook = MagicMock
 _AirflowException = sys.modules["airflow.exceptions"].AirflowException
+
 
 sys.path.insert(0, "terraform/modules/s3/plugins")
 from operators.data_quality_operator import (
