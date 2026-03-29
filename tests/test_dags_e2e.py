@@ -120,7 +120,7 @@ sys.modules["airflow.providers.amazon.aws.transfers.s3_to_redshift"].S3ToRedshif
 sys.modules["airflow.providers.amazon.aws.hooks.redshift_sql"].RedshiftSQLHook           = MagicMock
 sys.modules["airflow"].DAG = MagicMock
 sys.modules["airflow.providers.common.sql.operators.sql"].SQLExecuteQueryOperator = MagicMock
-sys.modules["airflow.models"].Variable.get = mock_variable_get 
+
 
 sys.path.insert(0, "dags")
 sys.path.insert(0, "terraform/modules/s3/plugins")
@@ -144,7 +144,7 @@ def mock_variable_get(key, deserialize_json=False, default_var=None):
     if deserialize_json and isinstance(val, str):
         return json.loads(val)
     return val
-
+sys.modules["airflow.models"].Variable.get = mock_variable_get 
 
 # ── Fake Airflow context ──────────────────────────────────────
 class _FakeTaskInstance:
