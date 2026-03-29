@@ -47,7 +47,7 @@ An end-to-end ELT pipeline that extracts financial data from Yahoo Finance via R
 | Workflow | Trigger | Action |
 |---------|---------|--------|
 | `ci.yml` | All pushes / PRs | flake8, black auto-format, pytest (49 tests) |
-| `push_iamge_ecr.yml` | `docker/` changes | Build, Trivy scan, push to ECR |
+| `push_image_ecr.yml` | `docker/` changes | Build, Trivy scan, push to ECR |
 | `terraform.yml` | `terraform/` or `plugins/` changes | `terraform plan` on PR / `terraform apply` on main |
 | `sync_dag_s3.yml` | `dags/` changes | `aws s3 sync` to MWAA bucket |
 
