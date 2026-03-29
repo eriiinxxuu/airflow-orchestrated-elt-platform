@@ -152,9 +152,11 @@ def _check_earnings_date(
 # ── Airflow REST API ──────────────────────────────────────────
 def _trigger_dag(symbols, earnings_dates, cli_token, hostname):
     import base64
-    
-    payload = f"dags trigger {AIRFLOW_DAG_ID} --conf '{json.dumps({'symbols': symbols})}'"
-    
+
+    payload = (
+        f"dags trigger {AIRFLOW_DAG_ID} --conf '{json.dumps({'symbols': symbols})}'"
+    )
+
     req = urllib.request.Request(
         f"https://{hostname}/aws_mwaa/cli",
         data=payload.encode(),
@@ -169,6 +171,7 @@ def _trigger_dag(symbols, earnings_dates, cli_token, hostname):
     stdout = base64.b64decode(body.get("stdout", "")).decode()
     stderr = base64.b64decode(body.get("stderr", "")).decode()
     logger.info("CLI response: %s %s", stdout, stderr)
+
 
 # ── Lambda handler ────────────────────────────────────────────
 def handler(event: dict, context: Any) -> dict:
