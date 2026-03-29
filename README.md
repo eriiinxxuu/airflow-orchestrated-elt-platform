@@ -40,6 +40,10 @@ An end-to-end ELT pipeline that extracts financial data from Yahoo Finance via R
 ```
 
 ## 🛠️ Technical Skills
+- **Cloud & Infrastructure**: MWAA, ECS Fargate, ECR, Lambda, EventBridge, Redshift Serverless, CloudWatch, SNS
+- **Data Engineering**: ELT pipelines, Data Quality Checks, Event-driven pipelines
+- **DevOps**: Docker, Terraform, Github Actions, CI/CD
+- **Programming**: Python, SQL, HCL (Terraform)
 
 
 ## CI/CD workflows
