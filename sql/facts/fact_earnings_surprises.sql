@@ -1,7 +1,4 @@
--- ──────────────────────────────────────────────────────────────
--- facts.fact_earnings_surprises
--- 只插入 historical 记录（有实际 EPS 的），estimate 不进 fact 表
--- ──────────────────────────────────────────────────────────────
+
 BEGIN;
 
 DELETE FROM facts.fact_earnings_surprises

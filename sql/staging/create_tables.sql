@@ -1,20 +1,11 @@
--- ══════════════════════════════════════════════════════════════
--- Yahoo Finance ELT Platform – 完整 Schema DDL
--- 执行顺序：先跑这个文件初始化所有表，之后由 DAG 维护数据
--- ══════════════════════════════════════════════════════════════
+
 
 CREATE SCHEMA IF NOT EXISTS staging;
 CREATE SCHEMA IF NOT EXISTS dimensions;
 CREATE SCHEMA IF NOT EXISTS facts;
 
 
--- ──────────────────────────────────────────────────────────────
--- STAGING TABLES  （每次 DAG 运行先 TRUNCATE 再 COPY）
--- 为什么用 staging？
---   S3 里的原始数据直接映射到宽表，
---   转换逻辑（SCD/merge）在独立的 fact 层 SQL 里做，
---   staging 只是缓冲区，保持简单。
--- ──────────────────────────────────────────────────────────────
+
 
 DROP TABLE IF EXISTS staging.yf_ohlcv;
 CREATE TABLE staging.yf_ohlcv (
@@ -25,7 +16,7 @@ CREATE TABLE staging.yf_ohlcv (
     high             DECIMAL(18,6),
     low              DECIMAL(18,6),
     close            DECIMAL(18,6),
-    adj_close        DECIMAL(18,6),         -- 复权收盘价
+    adj_close        DECIMAL(18,6),         
     volume           BIGINT,
     dividend         DECIMAL(10,6),
     split            VARCHAR(20),           -- e.g. "4:1"
@@ -37,9 +28,7 @@ CREATE TABLE staging.yf_ohlcv (
 )
 DISTSTYLE KEY DISTKEY (symbol)
 SORTKEY (date, symbol);
--- DISTKEY: 按 symbol 分布，同一 symbol 的数据在同一节点，
---          JOIN dim_symbols 时减少网络传输
--- SORTKEY: 按日期+symbol 排序，范围查询效率高
+
 
 
 DROP TABLE IF EXISTS staging.yf_fundamentals;
@@ -104,7 +93,7 @@ CREATE TABLE staging.yf_earnings (
     eps_actual            DECIMAL(12,4),
     eps_estimate          DECIMAL(12,4),
     eps_difference        DECIMAL(12,4),
-    surprise_pct          DECIMAL(10,6),  -- 实际/预估偏差百分比
+    surprise_pct          DECIMAL(10,6),  -- (eps_actual - eps_estimate) / NULLIF(eps_estimate, 0)
     revenue_estimate_avg  DECIMAL(22,2),
     eps_estimate_avg      DECIMAL(12,4),
     num_analysts_eps      INT,
@@ -134,7 +123,7 @@ CREATE TABLE IF NOT EXISTS dimensions.dim_symbols (
     last_seen_date    DATE,
     _updated_at       TIMESTAMP    DEFAULT GETDATE()
 )
-DISTSTYLE ALL     -- 小维度表复制到所有节点，JOIN 效率最高
+DISTSTYLE ALL     
 SORTKEY (symbol);
 
 
