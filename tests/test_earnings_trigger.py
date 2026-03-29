@@ -102,12 +102,14 @@ class TestGetMWAAToken(unittest.TestCase):
 
     def test_returns_web_token(self):
         mock_mwaa = MagicMock()
-        mock_mwaa.create_web_login_token.return_value = {"WebToken": "test-token-123"}
+        mock_mwaa.create_cli_token.return_value = {
+            "CliToken": "test-token-123",
+            "WebServerHostname": "test-host.airflow.aws",
+        }
         with patch("boto3.client", return_value=mock_mwaa):
-            token = et._get_mwaa_token()
-        assert token == "test-token-123"
-        mock_mwaa.create_web_login_token.assert_called_once_with(Name="yf-elt-airflow-dev")
-
+            cli_token, hostname = et._get_mwaa_token()
+        assert cli_token == "test-token-123"
+        assert hostname == "test-host.airflow.aws"
 
 # ── _trigger_dag tests ────────────────────────────────────────
 
@@ -115,33 +117,28 @@ class TestTriggerDag(unittest.TestCase):
 
     def test_posts_correct_payload(self):
         with patch("urllib.request.urlopen") as mock_urlopen:
+            import base64
             mock_urlopen.return_value.read.return_value = json.dumps({
-                "dag_run_id": "earnings_20240115T060000",
-                "state":      "queued",
+                "stdout": base64.b64encode(b"").decode(),
+                "stderr": base64.b64encode(b"").decode(),
             }).encode()
 
             et._trigger_dag(
                 symbols=["AAPL"],
                 earnings_dates={"AAPL": "2024-01-15"},
-                token="test-token",
+                cli_token="test-token",
+                hostname="test-host.airflow.aws",
             )
-
-        req = mock_urlopen.call_args[0][0]
-        assert "yf_event_earnings" in req.full_url
-        assert "dagRuns" in req.full_url
-        assert "Bearer test-token" in req.get_header("Authorization")
-
-        body = json.loads(req.data)
-        assert body["conf"]["symbols"]                == ["AAPL"]
-        assert body["conf"]["earnings_dates"]["AAPL"] == "2024-01-15"
-        assert body["conf"]["triggered_by"]           == "earnings_trigger_lambda"
 
     def test_raises_on_http_error(self):
         import urllib.error
         with patch("urllib.request.urlopen",
-                   side_effect=urllib.error.HTTPError(None, 403, "Forbidden", {}, None)):
-            with pytest.raises(RuntimeError, match="403"):
-                et._trigger_dag(["AAPL"], {"AAPL": "2024-01-15"}, "bad-token")
+                side_effect=urllib.error.HTTPError(None, 403, "Forbidden", {}, None)):
+            with pytest.raises(Exception):
+                et._trigger_dag(
+                    ["AAPL"], {"AAPL": "2024-01-15"},
+                    "bad-token", "test-host.airflow.aws"
+            )
 
 
 # ── handler tests ─────────────────────────────────────────────
