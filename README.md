@@ -1,7 +1,7 @@
 # MWAA Orchestrated ELT Platfrom
 
 ## 📚Introduction
-An end-to-end ELT pipeline that extracts financial data from Yahoo Finance via REST API, loads it into Redshift Serverless, and transforms it into analytics-ready fact tables — fully automated with Airflow on MWAA and deployed via Terraform + GitHub Actions.
+An end-to-end ELT pipeline that extracts financial data from `Yahoo Finance` via REST API using **on-demand ECS Fargate Standalone Tasks**, loads it into Redshift Serverless, and transforms it into analytics-ready fact tables — fully automated with Airflow on MWAA and deployed via Terraform + GitHub Actions.
 
 ## 👀 Architecture
 
