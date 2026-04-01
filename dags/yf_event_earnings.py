@@ -54,6 +54,11 @@ def _parse_conf(**context) -> None:
     Why use XCom instead of reading conf directly in downstream tasks?
     Passing data through XCom is the Airflow standard pattern — it makes
     data flow visible in the UI and easier to test.
+
+    # context： 
+    1. from external trigger, such as lambda, sensor: context["dag_run"].conf
+    2. from Cross-Task Communication / XCom: context["ti"].xcom_pull
+    3. from airflow system env: such as execution_date, run_id, task, ti, dag...
     """
     conf = context["dag_run"].conf or {}
 
