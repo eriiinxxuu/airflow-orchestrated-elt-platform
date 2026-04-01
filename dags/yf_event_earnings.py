@@ -55,7 +55,7 @@ def _parse_conf(**context) -> None:
     Passing data through XCom is the Airflow standard pattern — it makes
     data flow visible in the UI and easier to test.
 
-    # context： 
+    # context：
     1. from external trigger, such as lambda, sensor: context["dag_run"].conf
     2. from Cross-Task Communication / XCom: context["ti"].xcom_pull
     3. from airflow system env: such as execution_date, run_id, task, ti, dag...
