@@ -85,6 +85,12 @@ class YahooFinanceECSOperator(BaseOperator):
           4. Poll until the task reaches STOPPED status
           5. Check exit code — raise AirflowException if non-zero
           6. Return the S3 path (automatically stored in XCom)
+
+       # context： 
+       1. from external trigger, such as lambda, sensor
+       2. from Cross-Task Communication / XCom: context["ti"].xcom_pull
+       3. from airflow system env: such as execution_date, run_id, ds, task, ti, dag...
+       
         """
         exec_date: datetime = context["execution_date"]
 
