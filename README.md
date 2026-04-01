@@ -21,6 +21,7 @@ An end-to-end ELT pipeline that extracts financial data from `Yahoo Finance` via
 
 ## 👀 Architecture
 
+![System Architecture](https://github.com/eriiinxxuu/airflow-orchestrated-elt-platform/blob/main/architecture.png)
 
 
 ## 🔍 Project Structure
