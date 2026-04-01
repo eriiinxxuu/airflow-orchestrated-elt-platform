@@ -1,5 +1,21 @@
 # MWAA Orchestrated ELT Platfrom
 
+
+![Python](https://img.shields.io/badge/Python-3.11-blue?style=flat&logo=python&logoColor=white)
+![Apache Airflow](https://img.shields.io/badge/Apache%20Airflow-2.9.2-017CEE?style=flat&logo=apacheairflow&logoColor=white)
+![AWS](https://img.shields.io/badge/AWS-FF9900?style=flat&logo=amazonaws&logoColor=white)
+![MWAA](https://img.shields.io/badge/MWAA-Managed%20Airflow-FF9900?style=flat&logo=amazonaws&logoColor=white)
+![ECS Fargate](https://img.shields.io/badge/ECS-Fargate-FF9900?style=flat&logo=amazonaws&logoColor=white)
+![Redshift](https://img.shields.io/badge/Redshift-Serverless-8C4FFF?style=flat&logo=amazonredshift&logoColor=white)
+![Lambda](https://img.shields.io/badge/Lambda-FF9900?style=flat&logo=awslambda&logoColor=white)
+![EventBridge](https://img.shields.io/badge/EventBridge-FF9900?style=flat&logo=amazonaws&logoColor=white)
+![SNS](https://img.shields.io/badge/SNS-FF9900?style=flat&logo=amazonaws&logoColor=white)
+![Terraform](https://img.shields.io/badge/Terraform-IaC-7B42BC?style=flat&logo=terraform&logoColor=white)
+![Docker](https://img.shields.io/badge/Docker-2496ED?style=flat&logo=docker&logoColor=white)
+![GitHub Actions](https://img.shields.io/badge/GitHub%20Actions-CI%2FCD-2088FF?style=flat&logo=githubactions&logoColor=white)
+
+
+
 ## 📚Introduction
 An end-to-end ELT pipeline that extracts financial data from `Yahoo Finance` via REST API using **on-demand ECS Fargate Standalone Tasks**, loads it into Redshift Serverless, and transforms it into analytics-ready fact tables — fully automated with Airflow on MWAA and deployed via Terraform + GitHub Actions.
 
